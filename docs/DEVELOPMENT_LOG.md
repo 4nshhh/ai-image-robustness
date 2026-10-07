@@ -337,3 +337,134 @@ None.
 ### Status
 
 IN PROGRESS (transformation layer done; dataset/model/eval/app work ahead).
+
+Historical snapshot: accurate when written; superseded by the entries below.
+
+---
+
+## Development Step: Evaluation and Metrics Foundation (src/metrics.py, src/evaluate.py)
+
+### What We Did
+
+Implemented the evaluation and metrics foundation (Person 2 scope):
+`src/metrics.py` (reusable binary-classification metrics) and
+`src/evaluate.py` (generic PyTorch model-on-DataLoader evaluation).
+Uncommitted working-tree change; no other project file modified. No
+experiments run, no dataset or trained model required or used.
+
+### Why
+
+Person 2 built this independently of the not-yet-started dataset/model
+track, so that baseline, robustness, and robust-model evaluations later
+share one code path, one label mapping, and one metric set.
+
+### Files / Components
+
+- `src/metrics.py` — accuracy, precision, recall, F1 (AI class, label 1,
+  via scikit-learn, `zero_division=0`); ROC-AUC from AI-class
+  probabilities (NaN when `y_true` has a single class); fixed-order
+  confusion-matrix helper (`[[TN, FP], [FN, TP]]`, labels `[0, 1]`);
+  `compute_classification_metrics(y_true, y_pred, y_prob=None)` returning a
+  dict with accuracy/precision/recall/F1, ai_recall, ai_false_negative_rate,
+  real_recall, false_positive_rate, roc_auc (`None` when `y_prob` omitted —
+  never invented), confusion matrix plus tn/fp/fn/tp, and sample/support
+  counts. Accepts lists, NumPy arrays, or compatible array-likes.
+- `src/evaluate.py` — `evaluate_model(model, dataloader, device,
+  threshold=0.5)`: eval mode under `torch.no_grad()` (original
+  training state restored), collects true labels, predicted labels, and
+  AI-class probabilities, then delegates to `compute_classification_metrics`.
+  Output shapes handled: `[B]`/`[B, 1]` single logit via sigmoid,
+  `[B, 2]` logits via softmax column 1; anything else raises `ValueError`.
+  Never trains, never touches weights/data/transforms, no dataset or
+  architecture assumptions, no checkpoint paths.
+
+### Implementation Details
+
+Design decisions: scikit-learn as the metric backend for standard
+definitions; fixed label constants `LABEL_REAL = 0`, `LABEL_AI = 1`;
+threshold configurable (default 0.5); device defaults to CUDA when
+available else CPU; return structure `{"metrics", "y_true", "y_pred",
+"y_prob", "threshold", "n_samples"}`.
+
+### Verification
+
+Tests executed with throwaway scripts in the system temp directory
+(repo kept clean) using the `ml_clean` conda env
+(torch 2.13.0, sklearn 1.7.2), because the base env has a broken
+NumPy 2.5.2 / SciPy combination that prevents sklearn import:
+
+- Metrics test on hand-checkable synthetic example (TN=3, FP=1, FN=1,
+  TP=3): accuracy/precision/recall/F1 all 0.75 as hand-computed;
+  confusion matrix `[[3,1],[1,3]]`; ROC-AUC 0.9375 (matches
+  `sklearn.metrics.roc_auc_score` on the same inputs); AI recall 0.75,
+  AI FNR 0.25, real recall 0.75, FPR 0.25; `roc_auc is None` when
+  `y_prob` omitted; NumPy-array inputs accepted. PASSED.
+- Evaluate test on a synthetic 8-sample DataLoader with three dummy
+  classifiers (`[B]`, `[B,1]`, `[B,2]` outputs): all three ran,
+  returned metrics with ROC-AUC present, collected 8 labels/predictions/
+  probabilities in valid ranges; no-grad asserted inside `forward`;
+  parameters bit-identical before/after; training mode restored.
+  (Values acc=0.750, f1=0.750, auc=0.688 are dummy-model artifacts of
+  random data, not project results.) PASSED.
+
+### Problems / Solutions
+
+- Base conda env cannot import sklearn (NumPy 2.5.2 vs SciPy built for
+  NumPy 1.x). Solved by running tests under the existing `ml_clean`
+  env. No project dependency changes made; `requirements.txt` untouched.
+
+### Status
+
+COMPLETED (implemented, tested; uncommitted; no integration yet — needs
+Person 1's dataset/DataLoader, preprocessing, and trained checkpoints;
+no experiments run).
+
+---
+
+## Development Step: Current Status of Development (Update 2)
+
+### What We Did
+
+Recorded the current snapshot after the evaluation/metrics work. No new
+implementation in this step.
+
+### Why
+
+The previous snapshot predates `src/metrics.py` / `src/evaluate.py` and is
+preserved as history; this entry is the current record for the final
+report, PPT, demo, and viva.
+
+### Files / Components
+
+| Component | State |
+|---|---|
+| AGENTS.md incl. Development Log rules | Committed |
+| Repository scaffolding | COMPLETED |
+| Transformations (`src/transformations.py`) | COMPLETED — committed, smoke-tested |
+| Evaluation / metrics (`src/metrics.py`, `src/evaluate.py`) | COMPLETED — implemented and tested, uncommitted |
+| Dataset / audit / bias analysis | NOT STARTED |
+| Metadata / splits | NOT STARTED |
+| Preprocessing, models, training | NOT STARTED (placeholders) |
+| Baseline / robustness / robust-training experiments | NOT RUN |
+| Streamlit app (`app/app.py`) | NOT STARTED (placeholder) |
+| Results / metrics / graphs | None exist; all fields `TBD` |
+
+### Implementation Details
+
+Person 2 track (`transformations.py`, `metrics.py`, `evaluate.py`) is
+implemented and tested; Person 1 track (dataset, preprocessing, models,
+training) has not started, so no end-to-end evaluation is possible yet.
+No experiment has been run. Nothing in this log is invented.
+
+### Verification
+
+- Working-tree file inspection, `git status`, placeholder grep over
+  `src/`, and the test runs documented in the entry above.
+
+### Problems / Solutions
+
+None (beyond the base-env NumPy/SciPy issue already recorded above).
+
+### Status
+
+IN PROGRESS (Person 2 foundation done; dataset/model/app/experiments ahead).
