@@ -1,0 +1,23 @@
+# Data (never commit large datasets)
+data/raw/
+data/processed/
+# Keep split CSVs and metadata unless they are large; uncomment if needed:
+# data/splits/
+# data/metadata/
+
+# Models
+models/*.pth
+models/*.pt
+*.ckpt
+*.bin
+
+# App / Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+
+# Results: keep metrics/graphs tracked by default; ignore large prediction dumps if needed
+# results/predictions/
