@@ -468,3 +468,132 @@ None (beyond the base-env NumPy/SciPy issue already recorded above).
 ### Status
 
 IN PROGRESS (Person 2 foundation done; dataset/model/app/experiments ahead).
+
+Historical snapshot: accurate when written; superseded by the entries below.
+
+---
+
+## Development Step: Experiment Config and Result Infrastructure (src/experiment_config.py, src/results.py)
+
+### What We Did
+
+Implemented the experiment result/configuration foundation on `ansh-branch`
+(Person 2 scope): new `src/experiment_config.py` (declarative experiment
+descriptions) and new `src/results.py` (storable experiment outcomes).
+Uncommitted working-tree change, not yet committed. No actual experiments
+run; no dataset loaded; no model trained.
+
+### Why
+
+Later robustness experiments need a shared vocabulary for "which model, on
+which split, under which transformation, trained how" and a uniform way to
+store outcomes, without depending on Person 1's unfinished dataset/model
+track.
+
+### Files / Components
+
+- `src/experiment_config.py` — frozen dataclass `ExperimentConfig` with
+  model_name, experiment_name, split (default `"test"`), transformation
+  (default `"none"`), transformation_params (default `{}`), condition
+  (`"clean"`/`"transformed"`), optional training_condition, seed (default
+  42). Validation: non-empty names, condition restricted to the two values,
+  params must be a dict, seed must be int, and clean ⟺
+  `transformation="none"` with empty params (both directions enforced).
+  Plus `is_clean` property and JSON-safe `to_dict()`.
+- `src/results.py` — frozen dataclass `ExperimentResult` holding experiment/
+  model names, transformation + params, condition/split/training_condition,
+  accuracy/precision/recall/F1/AI recall/AI FNR/ROC-AUC, confusion matrix as
+  immutable `((TN, FP), (FN, TP))` tuples, and n_samples.
+  `from_metrics(config, metrics)` copies values from a
+  `compute_classification_metrics` dict without recomputing anything;
+  `to_dict()`/`from_dict()` give JSON-safe round-trips; `to_record()`
+  flattens to one DataFrame-row/CSV-line dict (cm expanded to
+  tn/fp/fn/tp, params as `param_<name>` columns). Missing ROC-AUC stays
+  None, never invented.
+
+### Implementation Details
+
+Design decisions: frozen dataclasses (configs/results are values, not
+mutable state); result layer organizes but never computes metrics
+(no duplication of `src/metrics.py`); no file I/O in either module
+(CSV/JSON writing comes later); compatible with existing
+`transformations.py` / `metrics.py` / `evaluate.py` by construction
+(`from_metrics` consumes their output shape directly).
+
+### Verification
+
+Throwaway in-memory test script (system temp dir, repo kept clean) run
+under the `ml_clean` env, all on synthetic data:
+
+1. Clean and transformed `ExperimentConfig` creation — OK.
+2. Six invalid configs rejected (empty name, bad condition,
+   clean-with-transformation, transformed-with-`none`, non-dict params,
+   non-int seed) — OK.
+3. `ExperimentResult.from_metrics` on synthetic 6-sample metrics —
+   values copied exactly, n_samples preserved — OK.
+4. Transformation params `{"quality": 50}` preserved through the result — OK.
+5. `to_dict()` passes `json.dumps`; `from_dict` round-trip equals original — OK.
+6. `to_record()` exposes tn/fp/fn/tp and `param_quality`; two records form
+   a valid pandas DataFrame — OK.
+7. Metrics dict without probabilities yields `roc_auc is None` — OK.
+
+Result: ALL EXPERIMENT-INFRA TESTS PASSED. No project metrics fabricated;
+all values synthetic or hand-checkable.
+
+### Problems / Solutions
+
+None.
+
+### Status
+
+COMPLETED (implemented, tested; uncommitted on `ansh-branch`; no
+experiments run, no results claimed).
+
+---
+
+## Development Step: Current Status of Development (Update 3)
+
+### What We Did
+
+Recorded the current snapshot after the experiment-infrastructure work. No
+new implementation in this step.
+
+### Why
+
+The previous snapshot predates `src/experiment_config.py` / `src/results.py`
+and is preserved as history.
+
+### Files / Components
+
+| Component | State |
+|---|---|
+| Branch discipline | All work on `ansh-branch`; `main` untouched |
+| Repository scaffolding | COMPLETED |
+| Transformations (`src/transformations.py`) | COMPLETED — committed, smoke-tested |
+| Evaluation / metrics (`src/metrics.py`, `src/evaluate.py`) | COMPLETED — committed (`f8c6c0d`) |
+| Experiment config / results (`src/experiment_config.py`, `src/results.py`) | COMPLETED — implemented and tested, uncommitted |
+| Dataset / audit / bias analysis | NOT STARTED |
+| Metadata / splits | NOT STARTED |
+| Preprocessing, models, training | NOT STARTED (placeholders) |
+| Baseline / robustness / robust-training experiments | NOT RUN |
+| Streamlit app (`app/app.py`) | NOT STARTED (placeholder) |
+| Results / metrics / graphs | None exist; all fields `TBD` |
+
+### Implementation Details
+
+Person 2 foundation (transformations, metrics, evaluation, experiment
+config/results) is implemented and tested; Person 1 track has not started,
+so no end-to-end experiment is possible yet. Nothing in this log is invented.
+
+### Verification
+
+- `git branch --show-current` (`ansh-branch`), `git status`, working-tree
+  file inspection, and the test run documented in the entry above.
+
+### Problems / Solutions
+
+None.
+
+### Status
+
+IN PROGRESS (Person 2 infrastructure done; dataset/model/app/experiments ahead).
