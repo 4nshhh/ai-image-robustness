@@ -714,3 +714,107 @@ None.
 ### Status
 
 IN PROGRESS (Person 2 infrastructure complete; dataset/model/app/experiments ahead).
+
+Historical snapshot: accurate when written; superseded by the entries below.
+
+---
+
+## Development Step: Experiment Protocol Definition (docs/EXPERIMENT_PROTOCOL.md)
+
+### What We Did
+
+Defined the experiment protocol for the robustness study on `ansh-branch`
+(Person 2 scope): new `docs/EXPERIMENT_PROTOCOL.md`, a planning/
+specification document for the work that will run once Person 1 delivers
+the dataset, DataLoader, model, and baseline checkpoint. Uncommitted
+working-tree change. No Python source code modified; no experiments run.
+
+### Why
+
+Person 2's infrastructure (transformations, metrics, evaluation, config,
+results, runner) is complete, so the next independent step was to fix
+the study design — groups, controls, metrics, and interpretation rules —
+before any data or checkpoints exist, preventing ad-hoc experimentation
+later.
+
+### Files / Components
+
+- `docs/EXPERIMENT_PROTOCOL.md` only: research question and label mapping;
+  prerequisites owned by Person 1; five experiment groups (clean baseline,
+  JPEG Q90/70/50/30, resize 0.75/0.50/0.25, recompression defined as
+  sequential encode→decode→encode cycles distinct from single
+  compression, three justified combined pipelines C1–C3 with order
+  recorded); fairness controls (same test set/checkpoint/preprocessing/
+  threshold/metrics/code, both-class transforms, no leakage, A/B study
+  separation); metric set with AI recall / AI FNR emphasized; robust
+  training framed with levels deliberately left TBD; optional
+  unseen-levels test marked OPTIONAL; result-storage requirements;
+  bias-audit reminder without asserting biases exist; interpretation
+  rules (observation vs interpretation vs hypothesis, no invented
+  significance thresholds); 17-row experiment matrix, all
+  PLANNED/PENDING.
+
+### Implementation Details
+
+Specification only — no code, no values decided beyond the proposed
+levels from AGENTS.md, no training probabilities invented, no claim the
+optional experiment will run.
+
+### Verification
+
+- Document written and inspected; `git status` confirms no source files
+  touched; matrix statuses all PLANNED/PENDING, no COMPLETED entries.
+
+### Problems / Solutions
+
+None.
+
+### Status
+
+COMPLETED (protocol defined; uncommitted on `ansh-branch`; execution
+blocked on Person 1 deliverables).
+
+---
+
+## Development Step: Current Status of Development (Update 5)
+
+### What We Did
+
+Recorded the current snapshot after the protocol work. No new
+implementation in this step.
+
+### Why
+
+The previous snapshot predates `docs/EXPERIMENT_PROTOCOL.md` and is
+preserved as history.
+
+### Files / Components
+
+| Component | State |
+|---|---|
+| Branch discipline | All work on `ansh-branch`; `main` untouched |
+| Person 2 infrastructure (transformations, metrics, evaluation, config, results, runner) | COMPLETED — committed, tested |
+| Experiment protocol (`docs/EXPERIMENT_PROTOCOL.md`) | COMPLETED — defined, uncommitted |
+| Dataset / splits / preprocessing / models / training (Person 1) | NOT STARTED (placeholders) |
+| All protocol experiments (17-row matrix) | PLANNED / PENDING — none run |
+| Streamlit app (`app/app.py`) | NOT STARTED (placeholder) |
+| Results / metrics / graphs | None exist; all fields `TBD` |
+
+### Implementation Details
+
+Everything Person 2 can do independently is specified and built; every
+remaining step needs Person 1's dataset/DataLoader/preprocessing/model/
+checkpoints. Nothing in this log is invented.
+
+### Verification
+
+- `git branch --show-current` (`ansh-branch`), `git status`, working-tree
+  file inspection.
+
+### Problems / Solutions
+
+None.
+
+### Status
+
+IN PROGRESS (protocol defined; awaiting Person 1 deliverables).
