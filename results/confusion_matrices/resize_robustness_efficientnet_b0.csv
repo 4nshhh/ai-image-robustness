@@ -1,0 +1,5 @@
+condition,resize_scale,tn,fp,fn,tp
+clean,,543,57,53,533
+resize_075,0.75,471,129,27,559
+resize_050,0.5,352,248,24,562
+resize_025,0.25,106,494,55,531

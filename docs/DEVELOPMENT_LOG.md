@@ -1431,3 +1431,75 @@ None in the run.
 
 COMPLETED (Experiment 1 measured and saved; uncommitted; resize /
 recompression / combined / robust-training NOT started per task scope).
+
+---
+
+## Development Step: Experiment 2 — Resize Robustness (EfficientNet-B0)
+
+### What We Did
+
+Ran protocol group 3.3 on `ansh-branch` (Person 2 scope): same 1,186-image
+test set + same EfficientNet-B0 checkpoint as the verified baseline, under
+clean / resize 0.75 / 0.50 / 0.25, on the RTX 4050 (CUDA, batch 32,
+threshold 0.5, no retraining). New `scripts/run_resize_robustness.py`
+(uncommitted); existing `apply_resize` reused with default BILINEAR for
+all conditions; no `src/` modified; baseline and JPEG files untouched.
+
+### Why
+
+Measure detection degradation under platform-style downscaling, applied as
+true information loss (PIL downscale before the unchanged 224x224 model
+preprocessing), not as a preprocessing variant.
+
+### Files / Components
+
+- `scripts/run_resize_robustness.py` — per-condition wrapper applying
+  `apply_resize(image, scale)` to every row (both classes, originals only
+  read) before clean preprocessing; existing `evaluate_model` +
+  `ExperimentConfig(transformation="resize", params={"scale"})` +
+  `ExperimentResult.from_metrics`; asserts n=1,186, 600/586, order
+  agreement, y_true identical across conditions, clean-within-1e-4, weight
+  and file immutability.
+- Outputs (new, uncommitted):
+  `results/metrics/resize_robustness_efficientnet_b0.csv` (4 rows),
+  `results/predictions/resize_robustness_efficientnet_b0.csv` (4,744 rows),
+  `results/confusion_matrices/resize_robustness_efficientnet_b0.csv`,
+  4 per-condition JSON logs in `results/experiment_logs/`.
+
+### Implementation Details
+
+ACTUAL MEASURED RESULTS (n=1,186 each):
+
+| Condition | Acc | Prec | AI Rec | AI F1 | AUC | AI FNR | CM [[TN,FP],[FN,TP]] |
+|---|---|---|---|---|---|---|---|
+| clean | 0.9073 | 0.9034 | 0.9096 | 0.9065 | 0.9649 | 0.0904 | [[543,57],[53,533]] |
+| resize_075 | 0.8685 | 0.8125 | 0.9539 | 0.8776 | 0.9560 | 0.0461 | [[471,129],[27,559]] |
+| resize_050 | 0.7707 | 0.6938 | 0.9590 | 0.8052 | 0.9273 | 0.0410 | [[352,248],[24,562]] |
+| resize_025 | 0.5371 | 0.5180 | 0.9061 | 0.6592 | 0.6680 | 0.0939 | [[106,494],[55,531]] |
+
+Observation (not a causal claim): resize degrades accuracy through the
+OPPOSITE error pattern from JPEG — precision collapses (Real FP 57 →
+129 → 248 → 494) while AI recall stays high (~0.91–0.96); at 0.25 the
+model predicts nearly everything as AI (AUC 0.668). JPEG destroyed AI
+recall; downscaling destroys Real precision. The asymmetry is flagged
+for error analysis, not explained here.
+
+### Verification
+
+- Every condition n=1,186, 600/586 (asserted in-run; all 8
+  condition×class groups re-verified in predictions CSV).
+- y_true identical across all four conditions (asserted).
+- Clean reproduces baseline within 1e-4; params bit-identical; test
+  files size+mtime identical; all-CUDA run.
+- `git status`: only new resize files + script; JPEG/baseline/src
+  untouched; nothing committed.
+
+### Problems / Solutions
+
+None in the run. The inverted error pattern vs JPEG was unexpected but
+is a measured observation, reported without causal claims.
+
+### Status
+
+COMPLETED (Experiment 2 measured and saved; uncommitted; recompression /
+combined / robust-training NOT started per task scope).
