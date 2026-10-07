@@ -1503,3 +1503,77 @@ is a measured observation, reported without causal claims.
 
 COMPLETED (Experiment 2 measured and saved; uncommitted; recompression /
 combined / robust-training NOT started per task scope).
+
+---
+
+## Development Step: Experiment 3 — Recompression Robustness (EfficientNet-B0)
+
+### What We Did
+
+Ran protocol group 3.4 on `ansh-branch` (Person 2 scope): same 1,186-image
+test set + same EfficientNet-B0 checkpoint, under clean / recompression
+Q90/Q70/Q50/Q30 with passes=2 (exactly what existing
+`apply_recompression` implements: two sequential same-quality JPEG
+encode→decode→encode cycles), on the RTX 4050 (CUDA, batch 32, threshold
+0.5, no retraining). New `scripts/run_recompression_robustness.py`
+(uncommitted); no duplicate recompression logic; no `src/` modified;
+baseline, JPEG, and resize files untouched.
+
+### Why
+
+Uploads are often compressed more than once across platforms; the protocol
+requires recompression measured as its own operation, distinct from single
+compression.
+
+### Files / Components
+
+- `scripts/run_recompression_robustness.py` — per-condition wrapper applying
+  `apply_recompression(image, quality, passes=2)` to every row (both
+  classes, originals only read) before clean preprocessing; existing
+  `evaluate_model` + `ExperimentConfig(transformation="recompression",
+  params={"quality","passes"})` + `ExperimentResult.from_metrics`; asserts
+  n=1,186, 600/586, order agreement, y_true identical, clean-within-1e-4,
+  weight and file immutability.
+- Outputs (new, uncommitted):
+  `results/metrics/recompression_robustness_efficientnet_b0.csv` (5 rows),
+  `results/predictions/recompression_robustness_efficientnet_b0.csv`
+  (5,930 rows with quality+passes columns),
+  `results/confusion_matrices/recompression_robustness_efficientnet_b0.csv`,
+  5 per-condition JSON logs in `results/experiment_logs/`.
+
+### Implementation Details
+
+ACTUAL MEASURED RESULTS (n=1,186 each):
+
+| Condition | Acc | Prec | AI Rec | AI F1 | AUC | AI FNR | CM [[TN,FP],[FN,TP]] |
+|---|---|---|---|---|---|---|---|
+| clean | 0.9073 | 0.9034 | 0.9096 | 0.9065 | 0.9649 | 0.0904 | [[543,57],[53,533]] |
+| recomp_q90_p2 | 0.8727 | 0.8891 | 0.8481 | 0.8681 | 0.9428 | 0.1519 | [[538,62],[89,497]] |
+| recomp_q70_p2 | 0.8272 | 0.8880 | 0.7440 | 0.8097 | 0.9062 | 0.2560 | [[545,55],[150,436]] |
+| recomp_q50_p2 | 0.7917 | 0.8775 | 0.6724 | 0.7614 | 0.8750 | 0.3276 | [[545,55],[192,394]] |
+| recomp_q30_p2 | 0.7428 | 0.8828 | 0.5529 | 0.6800 | 0.8439 | 0.4471 | [[557,43],[262,324]] |
+
+Observation (not a causal claim): recompression tracks single JPEG almost
+exactly (Q90/Q70/Q30 accuracies identical to Experiment 1 to 4 decimals;
+Q50 within 0.002) with the same AI-recall-collapse pattern and stable
+precision — the second pass adds essentially no further damage at these
+levels. Like JPEG and unlike resize, Real precision is preserved while AI
+images increasingly evade detection.
+
+### Verification
+
+- Every condition n=1,186, 600/586 (asserted in-run; all 10
+  condition×class groups re-verified in predictions CSV).
+- y_true identical across conditions; clean within 1e-4; params
+  bit-identical; test files size+mtime identical; all-CUDA run.
+- `git status`: only new recompression files + script + log edit;
+  baseline/JPEG/resize/src untouched; nothing committed.
+
+### Problems / Solutions
+
+None in the run.
+
+### Status
+
+COMPLETED (Experiment 3 measured and saved; uncommitted; combined /
+robust-training NOT started per task scope).

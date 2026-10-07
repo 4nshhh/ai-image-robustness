@@ -1,0 +1,6 @@
+condition,quality,passes,tn,fp,fn,tp
+clean,,,543,57,53,533
+recomp_q90_p2,90,2,538,62,89,497
+recomp_q70_p2,70,2,545,55,150,436
+recomp_q50_p2,50,2,545,55,192,394
+recomp_q30_p2,30,2,557,43,262,324
