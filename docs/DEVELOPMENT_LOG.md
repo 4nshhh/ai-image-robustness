@@ -1577,3 +1577,78 @@ None in the run.
 
 COMPLETED (Experiment 3 measured and saved; uncommitted; combined /
 robust-training NOT started per task scope).
+
+---
+
+## Development Step: Experiment 4 — Combined Transformation Robustness (EfficientNet-B0)
+
+### What We Did
+
+Ran protocol group 3.5 on `ansh-branch` (Person 2 scope): same 1,186-image
+test set + same EfficientNet-B0 checkpoint, under clean, C1 =
+Resize 0.50 → JPEG Q50, C2 = JPEG Q50 → Resize 0.50, C3 = Resize 0.50 →
+JPEG Q50 → JPEG Q50, on the RTX 4050 (CUDA, batch 32, threshold 0.5, no
+retraining). New `scripts/run_combined_robustness.py` (uncommitted);
+pipelines expressed with existing `apply_pipeline` (order preserved; C3
+holds two sequential JPEG passes); no `src/` modified; baseline, JPEG,
+resize, recompression files untouched.
+
+### Why
+
+Protocol order-effect study: C1 vs C2 share parameters with opposite order;
+C3 bridges the single-transformation results (resize 0.50, JPEG Q50,
+recompression Q50 P2).
+
+### Files / Components
+
+- `scripts/run_combined_robustness.py` — per-condition wrapper applying the
+  ordered pipeline to every row (both classes, originals only read) before
+  clean preprocessing; research transforms strictly precede the single
+  final 224x224 preprocessing; existing `evaluate_model` +
+  `ExperimentConfig(transformation="combined", params={pipeline, scale,
+  quality, passes})` + `ExperimentResult.from_metrics`; asserts n=1,186,
+  600/586, order agreement, y_true identical, clean-within-1e-4, weight
+  and file immutability.
+- Outputs (new, uncommitted):
+  `results/metrics/combined_robustness_efficientnet_b0.csv` (4 rows),
+  `results/predictions/combined_robustness_efficientnet_b0.csv` (4,744 rows
+  with pipeline/scale/quality/passes columns),
+  `results/confusion_matrices/combined_robustness_efficientnet_b0.csv`,
+  4 per-condition JSON logs in `results/experiment_logs/`.
+
+### Implementation Details
+
+ACTUAL MEASURED RESULTS (n=1,186 each):
+
+| Condition | Acc | Prec | AI Rec | AI F1 | AUC | AI FNR | CM [[TN,FP],[FN,TP]] |
+|---|---|---|---|---|---|---|---|
+| clean | 0.9073 | 0.9034 | 0.9096 | 0.9065 | 0.9649 | 0.0904 | [[543,57],[53,533]] |
+| C1 resize→jpeg | 0.7336 | 0.8516 | 0.5580 | 0.6742 | 0.8638 | 0.4420 | [[543,57],[259,327]] |
+| C2 jpeg→resize | 0.7715 | 0.7191 | 0.8823 | 0.7923 | 0.8784 | 0.1177 | [[398,202],[69,517]] |
+| C3 resize→jpeg→jpeg | 0.7310 | 0.8560 | 0.5478 | 0.6681 | 0.8648 | 0.4522 | [[546,54],[265,321]] |
+
+Observation (not a causal claim): transformation ORDER matters
+measurably — C1 and C2 share parameters yet fail oppositely: C1 shows the
+JPEG pattern (AI recall collapse, Real side untouched: TN/FP identical to
+clean at 543/57), C2 shows the resize pattern (Real precision collapse,
+FP 202, AI recall preserved at 0.8823). The LAST transformation in the
+pipeline dominates the error mode. C3 ≈ C1 (extra JPEG pass adds ~nothing),
+consistent with Experiment 3's finding.
+
+### Verification
+
+- Every condition n=1,186, 600/586 (asserted; all 8 groups re-verified).
+- y_true identical; clean within 1e-4; params bit-identical; files
+  size+mtime identical; all-CUDA; each condition rebuilt from original
+  source images (fresh PIL read per row per condition).
+- `git status`: only new combined files + script + log edit; all prior
+  outputs/src untouched; nothing committed.
+
+### Problems / Solutions
+
+None in the run.
+
+### Status
+
+COMPLETED (Experiment 4 measured and saved; uncommitted; robust-training /
+error-analysis / Streamlit NOT started per task scope).

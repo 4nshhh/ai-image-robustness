@@ -1,0 +1,5 @@
+condition,pipeline,tn,fp,fn,tp
+clean,none,543,57,53,533
+c1_resize_jpeg,resize(0.50)->jpeg(Q50),543,57,259,327
+c2_jpeg_resize,jpeg(Q50)->resize(0.50),398,202,69,517
+c3_resize_jpeg_jpeg,resize(0.50)->jpeg(Q50)->jpeg(Q50),546,54,265,321

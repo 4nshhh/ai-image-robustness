@@ -1,0 +1,55 @@
+{
+  "run_id": "20261007T190741Z",
+  "config": {
+    "model_name": "efficientnet_b0",
+    "experiment_name": "combined_robustness_c1_resize_jpeg",
+    "split": "test",
+    "transformation": "combined",
+    "transformation_params": {
+      "pipeline": "resize(0.50)->jpeg(Q50)",
+      "resize_scale": 0.5,
+      "jpeg_quality": 50,
+      "jpeg_passes": 1
+    },
+    "condition": "transformed",
+    "training_condition": "clean",
+    "seed": 42
+  },
+  "result": {
+    "experiment_name": "combined_robustness_c1_resize_jpeg",
+    "model_name": "efficientnet_b0",
+    "transformation": "combined",
+    "transformation_params": {
+      "pipeline": "resize(0.50)->jpeg(Q50)",
+      "resize_scale": 0.5,
+      "jpeg_quality": 50,
+      "jpeg_passes": 1
+    },
+    "condition": "transformed",
+    "split": "test",
+    "training_condition": "clean",
+    "accuracy": 0.7335581787521079,
+    "precision": 0.8515625,
+    "recall": 0.5580204778156996,
+    "f1": 0.6742268041237114,
+    "ai_recall": 0.5580204778156996,
+    "ai_false_negative_rate": 0.44197952218430037,
+    "roc_auc": 0.863815415244596,
+    "confusion_matrix": [
+      [
+        543,
+        57
+      ],
+      [
+        259,
+        327
+      ]
+    ],
+    "n_samples": 1186
+  },
+  "checkpoint": "models\\baseline\\efficientnet_b0_best.pth",
+  "threshold": 0.5,
+  "device": "cuda",
+  "batch_size": 32,
+  "seed": 42
+}
