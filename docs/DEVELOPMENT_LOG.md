@@ -597,3 +597,120 @@ None.
 ### Status
 
 IN PROGRESS (Person 2 infrastructure done; dataset/model/app/experiments ahead).
+
+Historical snapshot: accurate when written; superseded by the entries below.
+
+---
+
+## Development Step: Experiment Runner Orchestration (src/experiment_runner.py)
+
+### What We Did
+
+Implemented the reusable experiment orchestration layer on `ansh-branch`
+(Person 2 scope): new `src/experiment_runner.py` with `run_experiment()`
+and the `ExperimentOutcome` container. Uncommitted working-tree change,
+not yet committed. No real experiments run; no dataset or checkpoint used.
+
+### Why
+
+The runner connects the already-built infrastructure
+(`transformations.py`, `metrics.py`, `evaluate.py`,
+`experiment_config.py`, `results.py`) so that one configured call will
+execute an evaluation as soon as Person 1 provides a real model and
+DataLoader — with no logic duplicated.
+
+### Files / Components
+
+- `src/experiment_runner.py` only. `run_experiment(config, model,
+  dataloader, device, threshold, batch_transform, evaluate_fn)` calls the
+  existing `evaluate_model()` by default, converts its metrics via the
+  existing `ExperimentResult.from_metrics()` (no metric recalculation),
+  and returns a frozen `ExperimentOutcome` holding config, result, and
+  raw `y_true`/`y_pred`/`y_prob` arrays.
+
+### Implementation Details
+
+Key architectural decisions (transformation boundary): image-level PIL
+transformations live in the dataset (Person 1's component, untouched
+here), so transformed conditions take an already-transformed DataLoader
+from the caller — no dataset interface invented, no in-place mutation.
+An optional caller-supplied tensor-level `batch_transform` is applied to
+cloned input batches through a generator passed to the existing
+`evaluate_model` (no evaluation logic duplicated); an optional
+`evaluate_fn` with the same contract allows future transformation-aware
+evaluation strategies. No JPEG qualities, scales, passes, or combinations
+hardcoded. Threshold validated in (0, 1); config type-checked.
+
+### Verification
+
+Throwaway synthetic test (temp dir, repo kept clean) under `ml_clean` env
+on an 8-sample DataLoader with a dummy `[B, 2]` classifier:
+
+1. Plain run executes and returns `ExperimentResult` — OK.
+2. Delegation proved via a spy wrapping the real `evaluate_model`
+   (called once, identical metrics) — OK.
+3. Metadata preserved (names, clean condition, `transformation="none"`),
+   metrics preserved, predictions/probabilities accessible — OK.
+4. Model parameters bit-identical before/after — OK.
+5. Transformed-condition run with tiny in-memory `batch*0.9+0.01`
+   transform: params preserved, 3 batches seen, underlying dataset
+   tensors unchanged — OK.
+
+Result: ALL RUNNER TESTS PASSED. Reported values (e.g. acc=0.500) are
+dummy artifacts of random data, not project results.
+
+### Problems / Solutions
+
+None.
+
+### Status
+
+COMPLETED (implemented, tested; uncommitted on `ansh-branch`; blocked on
+Person 1's model/DataLoader for real runs; no experiments run).
+
+---
+
+## Development Step: Current Status of Development (Update 4)
+
+### What We Did
+
+Recorded the current snapshot after the runner work. No new implementation
+in this step.
+
+### Why
+
+The previous snapshot predates `src/experiment_runner.py` and is preserved
+as history.
+
+### Files / Components
+
+| Component | State |
+|---|---|
+| Branch discipline | All work on `ansh-branch`; `main` untouched |
+| Transformations / metrics / evaluation | COMPLETED — committed, tested |
+| Experiment config / results | COMPLETED — committed (`33b951c`) |
+| Experiment runner (`src/experiment_runner.py`) | COMPLETED — implemented and tested, uncommitted |
+| Dataset / splits / preprocessing / models / training | NOT STARTED (Person 1 placeholders) |
+| Baseline / robustness / robust-training experiments | NOT RUN |
+| Streamlit app (`app/app.py`) | NOT STARTED (placeholder) |
+| Results / metrics / graphs | None exist; all fields `TBD` |
+
+### Implementation Details
+
+Person 2 infrastructure (transformations, metrics, evaluation, config,
+results, runner) is complete and tested end-to-end on synthetic data;
+real runs await Person 1's dataset/DataLoader, preprocessing, models, and
+checkpoints. Nothing in this log is invented.
+
+### Verification
+
+- `git branch --show-current` (`ansh-branch`), `git status`, working-tree
+  file inspection, and the test run documented in the entry above.
+
+### Problems / Solutions
+
+None.
+
+### Status
+
+IN PROGRESS (Person 2 infrastructure complete; dataset/model/app/experiments ahead).
