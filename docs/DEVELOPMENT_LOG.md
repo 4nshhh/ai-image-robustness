@@ -1079,3 +1079,81 @@ reviewed, bug-fixed (see below), and test-verified by the team member.
 COMPLETED (foundation implemented and tested; committed on
 `krish-branch`; full 5,600-image training NOT run; Person 2 files
 untouched).
+
+---
+
+## Development Step: GPU Readiness Review (Clean-Baseline Gate)
+
+### What We Did
+
+Reviewed the Person 1 foundation for training correctness (no rewrites:
+code was already implemented and 39-check green), probed this machine
+for CUDA, gated the test suite on GPU for all model/training tests,
+fixed one real `.gitignore` safety gap, and prepared (but did NOT run)
+the two clean-baseline configurations. All work on `krish-branch`.
+
+### Why
+
+Full baseline training is expensive and must only start on a correct,
+leak-free pipeline with a proven GPU path. This step is the go/no-go
+gate before any 5,600-image run.
+
+### Files / Components
+
+- Reviewed (read-only, no changes): `src/preprocessing.py`,
+  `src/dataset.py`, `src/model.py`, `src/train.py`,
+  `tests/test_ml_foundation.py`, `notebooks/02_baseline_training.ipynb`,
+  `requirements.txt`, `AGENTS.md`. Findings: manifest is the sole label
+  source (test file proves label-column-over-filename); `train.py`
+  mentions "test" only in comments forbidding its use and has no test
+  loader; heads replaced correctly (`fc` / `classifier[1]`, `[B, 2]`);
+  checkpoint bundles carry architecture + label map; augmentation
+  defaults OFF; eval deterministic.
+- `tests/test_ml_foundation.py` (modified, was uncommitted): added
+  `require_cuda()` — prints torch build, CUDA availability, GPU name,
+  selected device, and STOPS with an explicit error instead of CPU
+  fallback. `main()` runs dataset/preprocessing checks on CPU, then
+  gates model/smoke tests on CUDA. Model tensors, checkpoint
+  `map_location`, and smoke `TrainConfig(device="cuda")` are explicit.
+- `.gitignore` (modified): fixed a real gap — `models/*.pth` does not
+  match `models/baseline/*.pth`, so baseline checkpoints were NOT
+  ignored. Now `models/**/*.pth` (+ `*.pt`), verified ignorable at any
+  depth; metrics CSVs and docs stay trackable.
+
+### Implementation Details
+
+Baseline configs prepared (config-only, no code changes needed —
+`python src/train.py --help` verified working):
+
+- ResNet-50: `python src/train.py --model resnet50 --epochs 10
+  --batch-size 32 --lr 1e-4 --weight-decay 1e-4 --optimizer adam
+  --seed 42 --checkpoint-dir models/baseline` (ImageNet pretrained,
+  clean train data, augmentation off, val-selected best checkpoint).
+- EfficientNet-B0: identical command with `--model efficientnet_b0`
+  (same split, same preprocessing, same protocol — fair comparison).
+
+### Verification
+
+- Environment: Python 3.11.9, torch 2.14.0+cpu, `cuda_available=False`
+  (CPU-only build — no CUDA device, no GPU name/memory to report).
+- GPU probe (temp dir, read-only): printed versions and STOPPED with
+  exit 10 before any model code; nothing ran on CPU as a substitute.
+- Test suite re-run: 25/25 CPU-allowed checks passed
+  (dataset 15 + preprocessing 10), then the gate STOPPED at
+  `require_cuda()` exactly as the standing GPU rule demands.
+- CLI `--help` works for both models. `git check-ignore` confirms
+  checkpoints/images/ZIP ignored, metrics/docs trackable. No `.pth`
+  files exist in the repo.
+
+### Problems / Solutions
+
+- `.gitignore` checkpoint gap (above): fixed and verified. No
+  implementation bugs found in `src/`; no metrics invented; smoke-test
+  loss/accuracy values remain dummy artifacts, not results.
+
+### Status
+
+COMPLETED (review passed; GPU path enforced in tests but NO CUDA on
+this machine, so ResNet-50/EfficientNet-B0 forward passes and GPU smoke
+training are NOT RUN — pending a CUDA machine; full baseline training
+NOT RUN).

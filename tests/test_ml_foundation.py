@@ -6,8 +6,15 @@ Run from the repository root::
 
 Uses only stdlib + torch/torchvision/PIL/numpy (no pytest needed).
 Exits nonzero on the first failure. The smoke-training section uses a
-tiny image subset on CPU and writes checkpoints to the system temp dir;
-the real dataset is never modified.
+tiny image subset and writes checkpoints to the system temp dir; the
+real dataset is never modified.
+
+GPU REQUIREMENT (standing rule): any model forward test, smoke
+training, or training-related test MUST run on CUDA. The suite prints
+the detected GPU and selected device, and STOPS with an explicit
+message instead of silently falling back to CPU when CUDA is
+unavailable. Lightweight non-model checks (dataset, preprocessing)
+may run on CPU.
 """
 
 from __future__ import annotations
@@ -47,12 +54,39 @@ from src.preprocessing import (  # noqa: E402
 from src.train import (  # noqa: E402
     TrainConfig,
     fit,
-    get_device,
     make_dataloaders,
     set_seed,
 )
 
 PASS = []
+
+
+def require_cuda() -> torch.device:
+    """Enforce the GPU rule for all model/training tests.
+
+    Prints the torch build, CUDA availability, detected GPU name, and
+    selected device. If CUDA is unavailable, STOPS here with an explicit
+    error instead of silently falling back to CPU.
+
+    Returns:
+        ``torch.device("cuda")`` when a GPU is present.
+
+    Raises:
+        RuntimeError: When CUDA is unavailable.
+    """
+    available = torch.cuda.is_available()
+    print(f"torch={torch.__version__} cuda_available={available}")
+    if not available:
+        raise RuntimeError(
+            "STOP: CUDA is unavailable on this machine, so model forward, "
+            "smoke-training, and training-related tests will NOT run on "
+            "CPU. Re-run on a CUDA machine. "
+            "(Dataset/preprocessing checks above already passed on CPU.)"
+        )
+    name = torch.cuda.get_device_name(0)
+    device = torch.device("cuda")
+    print(f"detected GPU: {name} | selected device: {device}")
+    return device
 
 
 def check(name: str, condition: bool) -> None:
@@ -179,13 +213,13 @@ def test_preprocessing() -> None:
         check("unknown split raises", True)
 
 
-def test_models() -> None:
-    print("[models]")
+def test_models(device: torch.device) -> None:
+    print(f"[models] device={device}")
     for name in ("resnet50", "efficientnet_b0"):
-        model = build_model(name, pretrained=False)
+        model = build_model(name, pretrained=False).to(device)
         model.eval()
         with torch.no_grad():
-            out = model(torch.randn(2, 3, IMAGE_SIZE, IMAGE_SIZE))
+            out = model(torch.randn(2, 3, IMAGE_SIZE, IMAGE_SIZE, device=device))
         check(f"{name} forward -> [2,2]", tuple(out.shape) == (2, 2))
         check(f"{name} has trainable params", count_parameters(model) > 0)
     try:
@@ -196,11 +230,11 @@ def test_models() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         ckpt = Path(tmp) / "m.pth"
-        model = build_model("resnet50", pretrained=False)
+        model = build_model("resnet50", pretrained=False).to(device)
         before = {k: v.clone() for k, v in model.state_dict().items()}
         save_checkpoint(ckpt, model, "resnet50", extra={"epoch": 3})
         check("checkpoint file created", ckpt.is_file())
-        loaded, bundle = load_checkpoint(ckpt, map_location="cpu")
+        loaded, bundle = load_checkpoint(ckpt, map_location=device)
         check("checkpoint reload keeps architecture+weights",
               bundle["model_name"] == "resnet50"
               and bundle["extra"] == {"epoch": 3}
@@ -208,9 +242,9 @@ def test_models() -> None:
                       for k, v in before.items()))
 
 
-def test_training_smoke() -> None:
-    print("[training smoke]")
-    check("device resolves (cpu here)", str(get_device()) in ("cpu", "cuda"))
+def test_training_smoke(device: torch.device) -> None:
+    print(f"[training smoke] device={device}")
+    check("device is CUDA (no silent CPU fallback)", str(device) == "cuda")
     set_seed(42)
     check("set_seed runs", True)
 
@@ -234,7 +268,7 @@ def test_training_smoke() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         cfg = TrainConfig(
             model_name="resnet50", pretrained=False, epochs=1,
-            batch_size=4, checkpoint_dir=Path(tmp),
+            batch_size=4, checkpoint_dir=Path(tmp), device="cuda",
             train_indices=real_idx + ai_idx, val_indices=v_real + v_ai,
         )
         history = fit(cfg)
@@ -255,15 +289,19 @@ def test_training_smoke() -> None:
               and (Path(tmp) / "resnet50_best.pth").is_file()
               and (Path(tmp) / "resnet50_last.pth").is_file()
               and (Path(tmp) / "resnet50_history.json").is_file())
-        loaded, bundle = load_checkpoint(Path(tmp) / "resnet50_best.pth")
+        loaded, bundle = load_checkpoint(
+            Path(tmp) / "resnet50_best.pth", map_location=device)
         check("best checkpoint reloads", bundle["model_name"] == "resnet50")
 
 
 def main() -> None:
+    # CPU-allowed: dataset and preprocessing involve no models.
     test_dataset()
     test_preprocessing()
-    test_models()
-    test_training_smoke()
+    # GPU-gated: stops with an explicit message when CUDA is absent.
+    device = require_cuda()
+    test_models(device)
+    test_training_smoke(device)
     print(f"\nALL {len(PASS)} CHECKS PASSED (full training NOT run)")
 
 
