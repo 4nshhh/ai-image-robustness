@@ -220,3 +220,120 @@ None.
 ### Status
 
 IN PROGRESS (scaffolding done; project work ahead).
+
+Historical snapshot: accurate when written; superseded by the entries below.
+
+---
+
+## Development Step: Transformation Layer Implementation (src/transformations.py)
+
+### What We Did
+
+Implemented the transformation layer in `src/transformations.py` (Person 2
+scope), committed as `aeeb4b5 feat: add image transformation utilities`.
+No other project file was modified.
+
+### Why
+
+Person 2 needed to work independently of the not-yet-started dataset/model
+track. Controlled, reusable transformations are the prerequisite for all
+robustness experiments.
+
+### Files / Components
+
+- `src/transformations.py` only (evidence: `git show --stat aeeb4b5` —
+  1 file changed, +186/−4).
+
+### Implementation Details
+
+Pillow-based; every function accepts a PIL image and returns a new PIL
+image; inputs are never modified in place; no class-specific logic
+(applies equally to Real and AI images):
+
+- `apply_jpeg_compression(image, quality)` — single JPEG encode/decode via
+  `BytesIO`; `quality` validated as int 1–100.
+- `apply_resize(image, scale, resample=BILINEAR)` — `round(w*scale)` x
+  `round(h*scale)`, aspect ratio preserved; scale must be positive and finite.
+- `apply_recompression(image, quality, passes=2)` — JPEG compression applied
+  `passes` times in sequence; kept distinct from single compression.
+- `apply_pipeline(image, transformations)` — ordered sequence of
+  image-to-image callables; order preserved; empty sequence returns a copy.
+- `_ensure_saveable_as_jpeg()` helper — converts RGBA/LA/PA/P to RGB so JPEG
+  saving is safe; RGB/L/CMYK returned as a copy.
+- Reference constants only (not hardcoded experiment config):
+  `JPEG_QUALITY_LEVELS = [90, 70, 50, 30]`,
+  `RESIZE_SCALES = [0.75, 0.50, 0.25]`.
+- Full docstrings and type hints throughout.
+
+### Verification
+
+- In-memory smoke test on a generated 200x100 RGB image plus a 64x48 RGBA
+  image, re-run against the committed state: JPEG Q70 output correct size;
+  RGBA handled safely (RGB output, input untouched); resize 0.5 gives 100x50
+  with aspect ratio preserved; recompression Q70x2 correct; sequential
+  pipeline (resize -> JPEG) gives 100x50; original image bytes unchanged in
+  every check. Result: SMOKE TEST PASSED.
+- `src/transformations.py` function/constant definitions confirmed by
+  inspection; all other `src/` modules still placeholders (see status entry).
+
+### Problems / Solutions
+
+None.
+
+### Status
+
+COMPLETED (implemented, tested, committed; not yet integrated with
+dataset/evaluation; no experiment results).
+
+---
+
+## Development Step: Current Status of Development (Update)
+
+### What We Did
+
+Re-verified the log against the repository and Git history. No new
+implementation in this step.
+
+### Why
+
+Two commits landed after the previous status snapshot, making parts of it
+stale. Earlier entries are preserved as written (they were accurate at the
+time); this entry is the current snapshot.
+
+### Files / Components
+
+| Component | State |
+|---|---|
+| AGENTS.md incl. Development Log rules | COMMITTED (`ff8c724`) |
+| Repository scaffolding | COMPLETED (`b6c0094`) |
+| `docs/DEVELOPMENT_LOG.md` | Created (`ff8c724`), updated by this entry |
+| Transformations (`src/transformations.py`) | COMPLETED — committed (`aeeb4b5`), smoke-tested |
+| Dataset / audit / bias analysis | NOT STARTED |
+| Metadata / splits | NOT STARTED |
+| Preprocessing, models, training (`preprocessing.py`, `model.py`, `train.py`) | NOT STARTED (placeholders) |
+| Evaluation / metrics (`evaluate.py`, `metrics.py`) | NOT STARTED (placeholders) |
+| Baseline / robustness experiments | NOT RUN |
+| Streamlit app (`app/app.py`) | NOT STARTED (placeholder) |
+| Results / metrics / graphs | None exist; all fields `TBD` |
+
+### Implementation Details
+
+Committed history: `dec9e94` (initial setup), `ef89054` (AGENTS.md),
+`b6c0094` (scaffolding), `ff8c724` (log workflow + this log's creation),
+`aeeb4b5` (transformation utilities). Working tree clean. No experiment has
+been run; no dataset, model, training, or evaluation work exists. Nothing in
+this log is invented — every claim traces to the commits and files above.
+
+### Verification
+
+- `git log --oneline`, `git status --short` (clean), `git show --stat`
+  for `aeeb4b5` and `ff8c724`, placeholder grep over `src/`, function
+  inspection of `src/transformations.py`, and a re-run smoke test.
+
+### Problems / Solutions
+
+None.
+
+### Status
+
+IN PROGRESS (transformation layer done; dataset/model/eval/app work ahead).
