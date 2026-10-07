@@ -1,13 +1,22 @@
 # Data (never commit large datasets)
 data/raw/
 data/processed/
+data/downloads/
+# Never commit extracted split images (keep manifest.csv / split_metadata.json trackable)
+data/splits/**/*.png
+data/splits/**/*.jpg
+data/splits/**/*.jpeg
+data/splits/**/*.JPEG
+data/splits/**/*.PNG
+data/splits/**/*.webp
+data/splits/**/*.bmp
 # Keep split CSVs and metadata unless they are large; uncomment if needed:
 # data/splits/
 # data/metadata/
 
-# Models
-models/*.pth
-models/*.pt
+# Models (recursive: checkpoints live in models/baseline/ and models/robust/)
+models/**/*.pth
+models/**/*.pt
 *.ckpt
 *.bin
 

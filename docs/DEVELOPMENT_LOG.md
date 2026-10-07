@@ -818,3 +818,483 @@ None.
 ### Status
 
 IN PROGRESS (protocol defined; awaiting Person 1 deliverables).
+
+---
+
+## Development Step: Finalized Dataset Extraction and Verification (krish-branch)
+
+### What We Did
+
+Extracted and verified the finalized dataset ZIP on `krish-branch`.
+All work stayed on `krish-branch`; `main` and teammates' branches untouched.
+No training started; `src/preprocessing.py`, `src/model.py`, and training
+code untouched; no images modified, resized, renamed, resampled, or
+regenerated. The original ZIP was preserved in `data/downloads/`.
+
+### Why
+
+The finalized 8,000-image split is the Person 1 -> Person 2 handoff basis
+(train/val/test must be fixed before any baseline or robustness experiment),
+so its on-disk contents had to be verified against the expected counts
+before use.
+
+### Files / Components
+
+- Source: `data/downloads/genimage_8000_final (1).zip`
+  (1,888,200,231 bytes). NOTE: the file on disk carries the ` (1)` suffix;
+  `data/downloads/genimage_8000_final.zip` (exact name from the task) does
+  not exist. Extraction used the existing file as-is; it was not renamed,
+  moved, or deleted.
+- Destination: `data/splits/genimage_8000_split_v4/` with `train/`, `val/`,
+  `test/`, `manifest.csv`, `split_metadata.json`.
+- `.gitignore` extended (uncommitted): `data/downloads/` plus image
+  extensions under `data/splits/**`, so the ZIP and extracted images can
+  never be committed; `manifest.csv` / `split_metadata.json` stay trackable.
+
+### Implementation Details
+
+- Extraction via Python `zipfile` (`extractall` into the destination dir).
+- Counts on disk: train/ai 2,800; train/real 2,800; val/ai 600;
+  val/real 600; test/ai 586; test/real 600. Total images on disk: 7,986
+  (expected 8,000; shortfall 14, all in `test/ai`).
+- The ZIP itself contains exactly these files (7,986 images + manifest +
+  metadata), so nothing was lost during extraction — the shortfall is in
+  the source ZIP.
+- `manifest.csv` exists with 8,000 rows and the expected declared
+  distribution (incl. 600 `test/ai`), so 14 manifest rows reference files
+  absent from the ZIP/disk: `test/ai/adm_00025.png`, `adm_00051.png`,
+  `biggan_00016.png`, `glide_00016.png`, `glide_00044.png`,
+  `midjourney_00031.png`, `midjourney_00060.png`, `sdv5_00019.png`,
+  `sdv5_00048.png`, `wukong_00021.png`, `wukong_00029.png`,
+  `wukong_00036.png`, `wukong_00041.png`, `wukong_00070.png`. No
+  extra files on disk outside the manifest; no zero-byte or sub-1KB files;
+  extensions only `.jpeg` (4,000, Real) and `.png` (3,986, AI).
+- `split_metadata.json` exists and declares 8,000 total / test ai 600,
+  which matches the manifest but NOT the 586 `test/ai` files present.
+- Manifest `path` column uses the absolute prefix
+  `/kaggle/working/genimage_8000_split_v4/...`; only the
+  `split/label/filename` suffix matches this machine (portability note,
+  not a data error).
+- AI-assisted implementation: extraction/verification scripts were
+  AI-generated throwaway files run from the repo root and deleted
+  afterward; the repo contains no leftover verification scripts.
+
+### Verification
+
+- `git rev-parse --abbrev-ref HEAD` = `krish-branch` (before and after).
+- ZIP entry listing: 7,988 file entries (7,986 images + manifest +
+  metadata), per-class counts as above.
+- Post-extraction disk counts re-checked per directory; manifest-vs-disk
+  join on `split/label/filename` gives 14 missing, 0 extra.
+- Image integrity: full PIL `verify()` + `load()` over all 7,986 present
+  images — checked 7,986, ok 7,986, corrupted 0 (a 300-image stratified
+  sample also passed 300/300 earlier). Full scan completed without timeout
+  in the background run.
+- Git safety: `git check-ignore` confirms the ZIP is ignored;
+  `manifest.csv` / `split_metadata.json` remain visible to Git;
+  `git status --short` shows only `M .gitignore` and untracked `data/`
+  (images/ZIP hidden by ignore rules). Nothing committed (no commit was
+  requested).
+- Original ZIP still present in `data/downloads/` after extraction.
+
+### Problems / Solutions
+
+- ZIP filename mismatch (`genimage_8000_final (1).zip` vs expected
+  `genimage_8000_final.zip`): proceeded with the existing file without
+  renaming/deleting; flagged for the team to confirm canonical naming.
+- 14 `test/ai` files missing relative to manifest/metadata: recorded
+  exactly; NOT patched by inventing data. Awaiting team decision
+  (re-supply the 14 files vs accept 586 and amend manifest/metadata).
+- Full PIL scan initially timed out at the 120 s foreground limit;
+  re-ran as a background job to completion (7,986/7,986 ok).
+
+### Status
+
+COMPLETED with a FAILED exact-count verification: structure, manifest
+(8,000 rows), metadata file, and integrity of present images all pass,
+but on-disk total is 7,986 vs expected 8,000 (`test/ai` 586 vs 600).
+No training run; no model/preprocessing changes; awaiting next instruction.
+
+---
+
+## Development Step: Finalize 7,986-Image Dataset (Methodological Decision)
+
+### What We Did
+
+Accepted the 7,986 physically present images as the final dataset on
+`krish-branch`. Pruned `manifest.csv` to the 7,986 present files only
+(removed exactly the 14 absent `test/ai` rows; every other row
+byte-identical, verified by multiset comparison against a backup).
+Recomputed `split_metadata.json` from the pruned manifest (totals,
+class counts, per-generator split counts) and added an `integrity_note`.
+No image bytes touched; no preprocessing/model/training/notebook/
+transformation code touched. AI-assisted implementation: throwaway scripts
+in the system temp dir (repo kept clean); original 8,000-row manifest
+backed up to temp before editing.
+
+### Why
+
+Exact recovery of the 14 missing `test/ai` files was investigated and
+proven impossible from available sources: absent from the ZIP under
+`test/ai/`, no other local archive/extraction/cache copy, Kaggle source
+directory not accessible. Train/val same-named files are different images
+(14/14 different SHA-256) and were explicitly rejected as substitutes.
+The cross-split SHA-256 audit found zero exact-duplicate groups among the
+7,986 present images, so the remaining dataset has no content-level
+leakage. Leaving a manifest that declares 14 nonexistent files would be a
+worse methodological error than formally accepting 7,986.
+
+### Files / Components
+
+- `data/splits/genimage_8000_split_v4/manifest.csv`: 8,000 → 7,986 rows
+  (columns unchanged). Removed (all `test/ai`): adm_00025, adm_00051,
+  biggan_00016, glide_00016, glide_00044, midjourney_00031,
+  midjourney_00060, sdv5_00019, sdv5_00048, wukong_00021, wukong_00029,
+  wukong_00036, wukong_00041, wukong_00070 (.png).
+- `data/splits/genimage_8000_split_v4/split_metadata.json`: total 7,986
+  (Real 4,000 / AI 3,986); test 1,186 (600 Real / 586 AI); per-generator
+  test: adm 85, biggan 84, glide 83, midjourney 83, sdv5 84, vqdm 86,
+  wukong 81; `split_ratio` kept as intended design; `integrity_note` added.
+- `docs/experiment_log.md`: brief dataset-decision entry (test n = 1,186).
+
+### Implementation Details
+
+Final composition: train 5,600 (2,800/2,800), val 1,200 (600/600),
+test 1,186 (600 Real / 586 AI). Manifest `path` values keep their
+`/kaggle/working/...` prefix (portability note from the earlier entry).
+
+### Verification
+
+- Manifest 7,986 rows; every manifest file exists on disk; zero extra
+  image files outside the manifest.
+- Split/class counts: train 5,600; val 1,200; test 1,186; Real 4,000;
+  AI 3,986; test Real 600; test AI 586.
+- Full PIL verify+load over all 7,986 images: 0 corrupted.
+- Full SHA-256 over all 7,986 images: 7,986 distinct hashes, 0 duplicates.
+- `preprocessing.py`, `model.py`, `train.py`, notebooks, transformation
+  code confirmed unmodified via `git status` (only the four intended
+  files staged/committed).
+
+### Problems / Solutions
+
+- None in this step; the missing-14 problem was characterized in prior
+  entries and resolved here by team decision, not by data fabrication.
+
+### Status
+
+COMPLETED (dataset finalized at 7,986; committed on `krish-branch`;
+no experiments run yet).
+
+---
+
+## Development Step: Baseline ML Foundation (Person 1 Track)
+
+### What We Did
+
+Implemented the reusable Person 1 ML foundation on `krish-branch`
+(Person 1 scope): `src/preprocessing.py`, `src/dataset.py`,
+`src/model.py`, `src/train.py` (all previously docstring-only
+placeholders), plus `tests/test_ml_foundation.py` (39-check suite, all
+passing) and the `notebooks/02_baseline_training.ipynb` scaffold
+(21 cells). No full training run; no experiment results exist.
+
+### Why
+
+Baseline training cannot start until the dataset, preprocessing, models,
+and training loop share one tested code path with fixed label mapping
+and no test-data contact. This unblocks the ResNet-50 / EfficientNet-B0
+clean baselines while keeping Person 2's transformation/evaluation code
+untouched.
+
+### Files / Components
+
+- `src/preprocessing.py` — `IMAGE_SIZE = 224` documented standard input
+  for both models; fixed ImageNet mean/std (no statistics fitted on
+  project data); `load_image` (PIL -> RGB, robust to L/P/RGBA JPEG+PNG);
+  deterministic train core (direct resize) with optional mild
+  `RandomHorizontalFlip` (`augment=True`, train only); eval pipeline with
+  no randomness by construction (`get_transform` raises on val/test
+  augmentation). No JPEG/robustness logic here by design.
+- `src/dataset.py` — `GenImageDataset` over the finalized 7,986-row
+  manifest (source of truth for split/label/generator); local paths
+  resolved as `root/split/label/filename` via pathlib (manifest `path`
+  column ignored: non-portable `/kaggle/working/...` prefix); explicit
+  `LABEL_MAP = {"real": 0, "ai": 1}`; unknown labels raise instead of
+  guessing; optional metadata return; `load_manifest` rejects missing
+  files. Verified counts: train 5,600 (2,800/2,800), val 1,200
+  (600/600), test 1,186 (600 Real / 586 AI).
+- `src/model.py` — `build_model("resnet50" | "efficientnet_b0",
+  pretrained=...)` with 2-class heads (`fc` / `classifier[1]`,
+  `[B, 2]` logits for CrossEntropyLoss); modern `weights=` API with
+  `pretrained=` fallback; `save/checkpoint` bundle carries model name,
+  label map, and extras; no custom architectures.
+- `src/train.py` — one shared loop for both models: `TrainConfig`
+  dataclass (optimizer adam/adamw/sgd, lr, weight decay, epochs, seed 42,
+  CPU/CUDA auto device), seeded DataLoaders (train/val only — no test
+  loader exists in the module), train/val loss+accuracy history,
+  best-validation-accuracy checkpointing, CLI flags. Test data cannot
+  influence selection: it is never loaded here.
+- `tests/test_ml_foundation.py` — stdlib-assert suite (no pytest):
+  manifest counts/labels/existence, label-column-over-filename proof,
+  RGB handling, tensor shapes, eval determinism, both model forward
+  passes, checkpoint round-trip, and a 1-epoch CPU smoke run on 8
+  train + 4 val images with checkpoint/history verification.
+- `notebooks/02_baseline_training.ipynb` — 10-section scaffold
+  (config, seed/device, loading, sanity checks, model, training,
+  validation, checkpoint, test-eval placeholder, results placeholder);
+  test evaluation explicitly deferred to notebook 03; zero fabricated
+  values.
+
+### Implementation Details
+
+Team decisions: 224px direct-resize geometry shared by train/eval for
+baseline interpretability; augmentation defaults OFF; ImageNet
+normalization (pretrained weights); validation-accuracy checkpoint
+selection; seed 42 with documented CUDA nondeterminism limits.
+AI-assisted implementation: modules and tests were AI-scaffolded, then
+reviewed, bug-fixed (see below), and test-verified by the team member.
+
+### Verification
+
+- `python tests/test_ml_foundation.py`: ALL 39 CHECKS PASSED on CPU
+  (torch 2.14.0+cpu, no CUDA on this machine).
+- Smoke run used exactly the 8/4 subset (asserted via accuracy
+  fractions). Reported smoke values (e.g. loss ~0.68, acc 0.50) are
+  random-initialization dummy artifacts, NOT project results.
+- Notebook parses as JSON (nbformat 4, 21 cells).
+
+### Problems / Solutions
+
+- First background test run silently trained 1 epoch on the FULL train
+  set on CPU: `fit()` built its own loaders and ignored the test's
+  subset indices (fractional accuracies 0.5425/0.6183 exposed it — they
+  are impossible on 8/4 samples). Fixed by adding `train_indices` /
+  `val_indices` to `TrainConfig`, threading them into `fit()`, and
+  adding the subset-fraction assertion. No dataset files were modified,
+  no test data was involved, and all artifacts went to temp dirs.
+  Resolved; suite re-run green.
+
+### Status
+
+COMPLETED (foundation implemented and tested; committed on
+`krish-branch`; full 5,600-image training NOT run; Person 2 files
+untouched).
+
+---
+
+## Development Step: GPU Readiness Review (Clean-Baseline Gate)
+
+### What We Did
+
+Reviewed the Person 1 foundation for training correctness (no rewrites:
+code was already implemented and 39-check green), probed this machine
+for CUDA, gated the test suite on GPU for all model/training tests,
+fixed one real `.gitignore` safety gap, and prepared (but did NOT run)
+the two clean-baseline configurations. All work on `krish-branch`.
+
+### Why
+
+Full baseline training is expensive and must only start on a correct,
+leak-free pipeline with a proven GPU path. This step is the go/no-go
+gate before any 5,600-image run.
+
+### Files / Components
+
+- Reviewed (read-only, no changes): `src/preprocessing.py`,
+  `src/dataset.py`, `src/model.py`, `src/train.py`,
+  `tests/test_ml_foundation.py`, `notebooks/02_baseline_training.ipynb`,
+  `requirements.txt`, `AGENTS.md`. Findings: manifest is the sole label
+  source (test file proves label-column-over-filename); `train.py`
+  mentions "test" only in comments forbidding its use and has no test
+  loader; heads replaced correctly (`fc` / `classifier[1]`, `[B, 2]`);
+  checkpoint bundles carry architecture + label map; augmentation
+  defaults OFF; eval deterministic.
+- `tests/test_ml_foundation.py` (modified, was uncommitted): added
+  `require_cuda()` — prints torch build, CUDA availability, GPU name,
+  selected device, and STOPS with an explicit error instead of CPU
+  fallback. `main()` runs dataset/preprocessing checks on CPU, then
+  gates model/smoke tests on CUDA. Model tensors, checkpoint
+  `map_location`, and smoke `TrainConfig(device="cuda")` are explicit.
+- `.gitignore` (modified): fixed a real gap — `models/*.pth` does not
+  match `models/baseline/*.pth`, so baseline checkpoints were NOT
+  ignored. Now `models/**/*.pth` (+ `*.pt`), verified ignorable at any
+  depth; metrics CSVs and docs stay trackable.
+
+### Implementation Details
+
+Baseline configs prepared (config-only, no code changes needed —
+`python src/train.py --help` verified working):
+
+- ResNet-50: `python src/train.py --model resnet50 --epochs 10
+  --batch-size 32 --lr 1e-4 --weight-decay 1e-4 --optimizer adam
+  --seed 42 --checkpoint-dir models/baseline` (ImageNet pretrained,
+  clean train data, augmentation off, val-selected best checkpoint).
+- EfficientNet-B0: identical command with `--model efficientnet_b0`
+  (same split, same preprocessing, same protocol — fair comparison).
+
+### Verification
+
+- Environment: Python 3.11.9, torch 2.14.0+cpu, `cuda_available=False`
+  (CPU-only build — no CUDA device, no GPU name/memory to report).
+- GPU probe (temp dir, read-only): printed versions and STOPPED with
+  exit 10 before any model code; nothing ran on CPU as a substitute.
+- Test suite re-run: 25/25 CPU-allowed checks passed
+  (dataset 15 + preprocessing 10), then the gate STOPPED at
+  `require_cuda()` exactly as the standing GPU rule demands.
+- CLI `--help` works for both models. `git check-ignore` confirms
+  checkpoints/images/ZIP ignored, metrics/docs trackable. No `.pth`
+  files exist in the repo.
+
+### Problems / Solutions
+
+- `.gitignore` checkpoint gap (above): fixed and verified. No
+  implementation bugs found in `src/`; no metrics invented; smoke-test
+  loss/accuracy values remain dummy artifacts, not results.
+
+### Status
+
+COMPLETED (review passed; GPU path enforced in tests but NO CUDA on
+this machine, so ResNet-50/EfficientNet-B0 forward passes and GPU smoke
+training are NOT RUN — pending a CUDA machine; full baseline training
+NOT RUN).
+
+---
+
+## Development Step: RTX 3050 CUDA Validation + VRAM Assessment
+
+### What We Did
+
+Ran the previously CUDA-blocked ML foundation validation on the local
+NVIDIA GeForce RTX 3050 Laptop GPU (torch 2.12.0+cu126, CUDA 12.6,
+4.29 GB total VRAM, 3.46 GB free at probe time) on `krish-branch`.
+Fixed one test-only device bug exposed by the GPU run, measured
+per-batch-size VRAM for both models, and prepared (did NOT run) full
+baseline commands. No dataset/manifest changes; no Person-2 code
+touched; no checkpoints committed.
+
+### Why
+
+The prior gate entry left forward passes and smoke training as NOT RUN
+for lack of CUDA. This machine unblocks that validation, and its 4 GB
+VRAM limit needed an empirical batch-size verdict before any 10-epoch
+baseline is launched.
+
+### Files / Components
+
+- `tests/test_ml_foundation.py` — one real fix: the checkpoint
+  round-trip compared CUDA (`before`) vs CPU (reloaded) tensors, which
+  passed on CPU-only runs but raised `Expected all tensors to be on the
+  same device` on CUDA. Fix: `.to(device)` after reload plus a new
+  `reloaded model params live on CUDA` assertion (suite now 40 checks).
+- No `src/` changes needed; review of the committed pipeline still
+  holds (manifest-only labels, no test loader, `[B, 2]` heads,
+  val-selected checkpoints).
+
+### Implementation Details
+
+- Suite: `python tests/test_ml_foundation.py` → ALL 40 CHECKS PASSED,
+  device `cuda` throughout the model/smoke sections; dataset and
+  preprocessing sections ran on CPU as the rule allows. Zero tests ran
+  model code on CPU. Smoke subset exactly as specified: 8 train
+  (4 Real + 4 AI) + 4 val (2 + 2), 1 epoch, `device="cuda"`,
+  checkpoint save/reload + history verified (values are random-init
+  dummy artifacts, not results).
+- Controlled VRAM probe (temp dir, single fwd+bwd+Adam step, fp32,
+  random-init = same footprint as pretrained): ResNet-50 bs=32 →
+  peak reserved 3.35 GB; bs=16 → 1.89 GB; bs=8 → 1.07 GB.
+  EfficientNet-B0 bs=32 → 3.36 GB; bs=16 → 1.66 GB; bs=8 → 0.86 GB.
+- Verdict: batch 32 leaves ~0.1 GB headroom on this 4 GB card —
+  UNSAFE (display use, pin_memory, fragmentation can OOM it).
+  Recommendation (not applied): run both full baselines at
+  `--batch-size 16` to keep the comparison fair with margin.
+
+### Verification
+
+- `torch.cuda.is_available()` True; GPU name/VRAM printed by the
+  suite gate and probe; `git status` clean except intended files;
+  staged set will contain no images/ZIP/checkpoints (verified at
+  commit); full 10-epoch training NOT run.
+
+### Problems / Solutions
+
+- CUDA-tensor comparison bug (above): fixed, suite green.
+- `torch.cuda.reset_peak_memory_stats(0)` rejects the int ordinal on
+  this build (`Invalid device argument`); passing a `torch.device`
+  works. Temp-probe-only quirk, no repo impact.
+
+### Status
+
+COMPLETED (foundation CUDA-validated 40/40 on RTX 3050; batch-16
+recommended for full baselines; full training NOT RUN).
+
+---
+
+## Development Step: Clean Baseline Test Evaluation (Held-Out Test)
+
+### What We Did
+
+Evaluated both best clean-baseline checkpoints on the finalized
+held-out test split (1,186 images: 600 Real / 586 AI) on the RTX 3050
+(CUDA, eval batch 32, threshold fixed at 0.5, deterministic eval
+preprocessing). Saved per-image predictions, metrics JSON/CSV, and
+confusion-matrix CSV/PNG under `results/`. No retraining, no tuning,
+no test-based selection; training histories (untracked until now)
+committed as the record behind the validation numbers. No checkpoints
+committed (gitignored per AGENTS.md); no dataset/Person-2 changes.
+
+### Why
+
+The baselines were trained (reported best val: ResNet-50 0.8983 and
+EfficientNet-B0 0.8950, both epoch 8 — confirmed from the history
+JSONs, whose configs also confirm pretrained=true, batch 16,
+augment off, seed 42, full train rows). The held-out test score is the
+result that all later robustness comparisons build on.
+
+### Files / Components
+
+- Checkpoints used (read-only, NOT committed):
+  `models/baseline/resnet50_best.pth` (epoch 8) and
+  `models/baseline/efficientnet_b0_best.pth` (epoch 8). Verified:
+  correct architecture names, `num_classes=2`, label map
+  Real=0/AI=1, pretrained config, clean CUDA load, `[B, 2]` CUDA probe.
+- `results/predictions/baseline_{resnet50,efficientnet_b0}_clean.csv`
+  (1,186 rows each: split/label/generator/filename/true/pred/ai_prob).
+- `results/metrics/baseline_{...}_clean.json` +
+  `baseline_clean_test_summary.csv`.
+- `results/confusion_matrices/baseline_{...}_clean.{csv,png}`.
+- `models/baseline/{resnet50,efficientnet_b0}_history.json` (training
+  record; weights stay untracked).
+
+### Implementation Details
+
+REAL measured test results (threshold 0.5, n = 1,186; NOT validation
+numbers, NOT to be used for model selection):
+
+- ResNet-50: acc 0.9081, prec 0.9409, rec 0.8686, F1 0.9033,
+  ROC-AUC 0.9682; TN 568, FP 32, FN 77, TP 509; AI recall 0.8686,
+  AI FNR 0.1314, Real recall 0.9467, FPR 0.0533.
+- EfficientNet-B0: acc 0.9073, prec 0.9034, rec 0.9096, F1 0.9065,
+  ROC-AUC 0.9649; TN 543, FP 57, FN 53, TP 533; AI recall 0.9096,
+  AI FNR 0.0904, Real recall 0.9050, FPR 0.0950.
+
+Observation (not a selection): both models land within 0.001 accuracy;
+ResNet-50 leans precise (fewer Real false alarms, more missed AI),
+EfficientNet-B0 leans sensitive (fewer missed AI, more false alarms).
+Primary-model choice for notebook 03 is a team decision, still open.
+
+### Verification
+
+- Test counts asserted in-script (1,186; {0:600, 1:586}); CM cells
+  sum to 1,186 and reconcile with class counts for both models.
+- Eval script ran from system temp dir; repo holds only results/docs.
+- `evaluate_model` (Person 2) consumed unchanged with default
+  threshold; model code and weights untouched.
+
+### Problems / Solutions
+
+None in this step.
+
+### Status
+
+COMPLETED (clean test baselines measured and committed on
+`krish-branch`; robustness experiments NOT run).
