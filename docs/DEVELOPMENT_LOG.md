@@ -1157,3 +1157,72 @@ COMPLETED (review passed; GPU path enforced in tests but NO CUDA on
 this machine, so ResNet-50/EfficientNet-B0 forward passes and GPU smoke
 training are NOT RUN — pending a CUDA machine; full baseline training
 NOT RUN).
+
+---
+
+## Development Step: RTX 3050 CUDA Validation + VRAM Assessment
+
+### What We Did
+
+Ran the previously CUDA-blocked ML foundation validation on the local
+NVIDIA GeForce RTX 3050 Laptop GPU (torch 2.12.0+cu126, CUDA 12.6,
+4.29 GB total VRAM, 3.46 GB free at probe time) on `krish-branch`.
+Fixed one test-only device bug exposed by the GPU run, measured
+per-batch-size VRAM for both models, and prepared (did NOT run) full
+baseline commands. No dataset/manifest changes; no Person-2 code
+touched; no checkpoints committed.
+
+### Why
+
+The prior gate entry left forward passes and smoke training as NOT RUN
+for lack of CUDA. This machine unblocks that validation, and its 4 GB
+VRAM limit needed an empirical batch-size verdict before any 10-epoch
+baseline is launched.
+
+### Files / Components
+
+- `tests/test_ml_foundation.py` — one real fix: the checkpoint
+  round-trip compared CUDA (`before`) vs CPU (reloaded) tensors, which
+  passed on CPU-only runs but raised `Expected all tensors to be on the
+  same device` on CUDA. Fix: `.to(device)` after reload plus a new
+  `reloaded model params live on CUDA` assertion (suite now 40 checks).
+- No `src/` changes needed; review of the committed pipeline still
+  holds (manifest-only labels, no test loader, `[B, 2]` heads,
+  val-selected checkpoints).
+
+### Implementation Details
+
+- Suite: `python tests/test_ml_foundation.py` → ALL 40 CHECKS PASSED,
+  device `cuda` throughout the model/smoke sections; dataset and
+  preprocessing sections ran on CPU as the rule allows. Zero tests ran
+  model code on CPU. Smoke subset exactly as specified: 8 train
+  (4 Real + 4 AI) + 4 val (2 + 2), 1 epoch, `device="cuda"`,
+  checkpoint save/reload + history verified (values are random-init
+  dummy artifacts, not results).
+- Controlled VRAM probe (temp dir, single fwd+bwd+Adam step, fp32,
+  random-init = same footprint as pretrained): ResNet-50 bs=32 →
+  peak reserved 3.35 GB; bs=16 → 1.89 GB; bs=8 → 1.07 GB.
+  EfficientNet-B0 bs=32 → 3.36 GB; bs=16 → 1.66 GB; bs=8 → 0.86 GB.
+- Verdict: batch 32 leaves ~0.1 GB headroom on this 4 GB card —
+  UNSAFE (display use, pin_memory, fragmentation can OOM it).
+  Recommendation (not applied): run both full baselines at
+  `--batch-size 16` to keep the comparison fair with margin.
+
+### Verification
+
+- `torch.cuda.is_available()` True; GPU name/VRAM printed by the
+  suite gate and probe; `git status` clean except intended files;
+  staged set will contain no images/ZIP/checkpoints (verified at
+  commit); full 10-epoch training NOT run.
+
+### Problems / Solutions
+
+- CUDA-tensor comparison bug (above): fixed, suite green.
+- `torch.cuda.reset_peak_memory_stats(0)` rejects the int ordinal on
+  this build (`Invalid device argument`); passing a `torch.device`
+  works. Temp-probe-only quirk, no repo impact.
+
+### Status
+
+COMPLETED (foundation CUDA-validated 40/40 on RTX 3050; batch-16
+recommended for full baselines; full training NOT RUN).

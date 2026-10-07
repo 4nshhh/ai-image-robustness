@@ -235,6 +235,9 @@ def test_models(device: torch.device) -> None:
         save_checkpoint(ckpt, model, "resnet50", extra={"epoch": 3})
         check("checkpoint file created", ckpt.is_file())
         loaded, bundle = load_checkpoint(ckpt, map_location=device)
+        loaded = loaded.to(device)
+        check("reloaded model params live on CUDA",
+              all(p.is_cuda for p in loaded.parameters()))
         check("checkpoint reload keeps architecture+weights",
               bundle["model_name"] == "resnet50"
               and bundle["extra"] == {"epoch": 3}
