@@ -1,0 +1,6 @@
+condition,jpeg_quality,tn,fp,fn,tp
+clean,,543,57,53,533
+jpeg_q90,90,537,63,88,498
+jpeg_q70,70,543,57,148,438
+jpeg_q50,50,544,56,189,397
+jpeg_q30,30,556,44,261,325

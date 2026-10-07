@@ -1298,3 +1298,136 @@ None in this step.
 
 COMPLETED (clean test baselines measured and committed on
 `krish-branch`; robustness experiments NOT run).
+
+---
+
+## Development Step: EfficientNet-B0 Baseline Verification on GPU (Person 2)
+
+### What We Did
+
+Independently re-verified Krish's clean EfficientNet-B0 baseline on
+`ansh-branch` (Person 2 scope): new `scripts/verify_baseline.py`, executed
+on the NVIDIA GeForce RTX 4050 Laptop GPU (torch 2.13.0+cu126) against the
+local finalized dataset and the committed-untracked
+`models/baseline/efficientnet_b0_best.pth` checkpoint. No retraining, no
+threshold change (0.5), no test-set modification, no transformations.
+
+### Why
+
+The robustness study (protocol Sections 3.2–3.5) measures degradation
+relative to this baseline, so Person 2 confirmed the reference numbers
+reproduce on an independent machine/GPU before running any transformed
+condition.
+
+### Files / Components
+
+- `scripts/verify_baseline.py` (new, uncommitted): enforces CUDA at
+  startup (`RuntimeError`, no CPU fallback), prints torch/CUDA/GPU
+  identity, loads `GenImageDataset(split="test",
+  transform=get_transform("test"))` pinned to the finalized manifest,
+  asserts test composition 1,186 (600 Real / 586 AI), loads the
+  checkpoint via existing `src.model.load_checkpoint` (bundle verified:
+  efficientnet_b0, 2 classes, Real=0/AI=1), asserts all 213 parameter
+  tensors live on CUDA, evaluates via existing `src.evaluate.evaluate_model`
+  (batch 32, num_workers=0, no_grad inside), compares six metrics against
+  reference within 1e-4 (exit 1 on mismatch), and fails if `git status`
+  shows tracked/staged images or checkpoints.
+- No `src/` module modified.
+
+### Implementation Details
+
+One script bug fixed before the green run: first version asserted a
+`manifest_path` attribute that `GenImageDataset` does not expose
+(`AttributeError`); replaced with explicit manifest/root pinning plus a
+per-row `test/` directory check and `class_counts()` (avoids loading
+images twice).
+
+### Verification
+
+Actual run output: CUDA True, RTX 4050, test 1,186 (Real 600 / AI 586),
+213/213 tensors on CUDA, evaluated 1,186, CM [[543, 57], [53, 533]],
+accuracy 0.9073, precision 0.9034, recall/AI recall 0.9096, F1 0.9065,
+ROC-AUC 0.9649, AI FNR 0.0904 — every reference metric matched within
+1e-4 (4-decimal prints identical). `git status` showed only
+`?? scripts/`; no dataset images or `.pth` files tracked/staged.
+
+### Problems / Solutions
+
+- Script attribute bug (above): fixed, re-run green. No data, model, or
+  environment issues.
+
+### Status
+
+COMPLETED (baseline independently VERIFIED on GPU; uncommitted;
+robustness experiments still NOT run — cleared to start with JPEG sweep
+after primary-model confirmation, already given: EfficientNet-B0).
+
+---
+
+## Development Step: Experiment 1 — JPEG Compression Robustness (EfficientNet-B0)
+
+### What We Did
+
+Ran the first protocol experiment on `ansh-branch` (Person 2 scope):
+same 1,186-image test set + same EfficientNet-B0 checkpoint as the
+verified baseline, under clean / JPEG Q90 / Q70 / Q50 / Q30, on the
+RTX 4050 (CUDA, batch 32, threshold 0.5, no retraining). New
+`scripts/run_jpeg_robustness.py` (uncommitted); no `src/` module
+modified; baseline files untouched.
+
+### Why
+
+Protocol group 3.2: measure detection degradation under strengthening
+JPEG compression, the most common social-media transformation.
+
+### Files / Components
+
+- `scripts/run_jpeg_robustness.py` — per-condition `JpegTestDataset`
+  wrapper applying existing `apply_jpeg_compression` to the PIL image
+  of every row (both classes, originals only read) before the unchanged
+  clean preprocessing; existing `evaluate_model` + `ExperimentConfig` +
+  `ExperimentResult.from_metrics`; asserts n=1,186, 600/586 classes,
+  prediction/manifest order agreement, clean-within-1e-4, weight and
+  file immutability; fails on git-tracked images/checkpoints.
+- Outputs (new, uncommitted):
+  `results/metrics/jpeg_robustness_efficientnet_b0.csv` (5 rows),
+  `results/predictions/jpeg_robustness_efficientnet_b0.csv` (5,930 rows:
+  filename/split/generator/true/pred/ai_prob/condition/quality),
+  `results/confusion_matrices/jpeg_robustness_efficientnet_b0.csv`,
+  5 per-condition JSON logs in `results/experiment_logs/`.
+
+### Implementation Details
+
+ACTUAL MEASURED RESULTS (n=1,186 each; AI F1 = F1 of class 1):
+
+| Condition | Acc | Prec | AI Rec | AI F1 | AUC | AI FNR |
+|---|---|---|---|---|---|---|
+| clean | 0.9073 | 0.9034 | 0.9096 | 0.9065 | 0.9649 | 0.0904 |
+| jpeg_q90 | 0.8727 | 0.8877 | 0.8498 | 0.8684 | 0.9432 | 0.1502 |
+| jpeg_q70 | 0.8272 | 0.8848 | 0.7474 | 0.8104 | 0.9066 | 0.2526 |
+| jpeg_q50 | 0.7934 | 0.8764 | 0.6775 | 0.7642 | 0.8755 | 0.3225 |
+| jpeg_q30 | 0.7428 | 0.8808 | 0.5546 | 0.6806 | 0.8442 | 0.4454 |
+
+Observation (not causal claim): monotonic degradation with stronger
+compression, concentrated in AI recall (0.9096 → 0.5546; FNR 0.0904 →
+0.4454) while precision stays ~0.88 — the detector misses more AI images
+rather than false-alarming more Real ones.
+
+### Verification
+
+- Every condition n=1,186 with 600 Real / 586 AI (asserted in-run and
+  re-checked in the predictions CSV: 10/10 condition×class groups exact).
+- Clean reproduces verified baseline within 1e-4 (all six metrics).
+- Model parameters bit-identical before/after; test files size+mtime
+  identical; `y_true` matches manifest labels in order (no drift).
+- `git status`: only new result files + `scripts/`; baseline results,
+  checkpoints, dataset untouched; nothing committed.
+
+### Problems / Solutions
+
+None in the run.
+
+### Status
+
+COMPLETED (Experiment 1 measured and saved; uncommitted; resize /
+recompression / combined / robust-training NOT started per task scope).
