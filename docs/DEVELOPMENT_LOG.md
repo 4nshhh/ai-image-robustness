@@ -1226,3 +1226,75 @@ baseline is launched.
 
 COMPLETED (foundation CUDA-validated 40/40 on RTX 3050; batch-16
 recommended for full baselines; full training NOT RUN).
+
+---
+
+## Development Step: Clean Baseline Test Evaluation (Held-Out Test)
+
+### What We Did
+
+Evaluated both best clean-baseline checkpoints on the finalized
+held-out test split (1,186 images: 600 Real / 586 AI) on the RTX 3050
+(CUDA, eval batch 32, threshold fixed at 0.5, deterministic eval
+preprocessing). Saved per-image predictions, metrics JSON/CSV, and
+confusion-matrix CSV/PNG under `results/`. No retraining, no tuning,
+no test-based selection; training histories (untracked until now)
+committed as the record behind the validation numbers. No checkpoints
+committed (gitignored per AGENTS.md); no dataset/Person-2 changes.
+
+### Why
+
+The baselines were trained (reported best val: ResNet-50 0.8983 and
+EfficientNet-B0 0.8950, both epoch 8 — confirmed from the history
+JSONs, whose configs also confirm pretrained=true, batch 16,
+augment off, seed 42, full train rows). The held-out test score is the
+result that all later robustness comparisons build on.
+
+### Files / Components
+
+- Checkpoints used (read-only, NOT committed):
+  `models/baseline/resnet50_best.pth` (epoch 8) and
+  `models/baseline/efficientnet_b0_best.pth` (epoch 8). Verified:
+  correct architecture names, `num_classes=2`, label map
+  Real=0/AI=1, pretrained config, clean CUDA load, `[B, 2]` CUDA probe.
+- `results/predictions/baseline_{resnet50,efficientnet_b0}_clean.csv`
+  (1,186 rows each: split/label/generator/filename/true/pred/ai_prob).
+- `results/metrics/baseline_{...}_clean.json` +
+  `baseline_clean_test_summary.csv`.
+- `results/confusion_matrices/baseline_{...}_clean.{csv,png}`.
+- `models/baseline/{resnet50,efficientnet_b0}_history.json` (training
+  record; weights stay untracked).
+
+### Implementation Details
+
+REAL measured test results (threshold 0.5, n = 1,186; NOT validation
+numbers, NOT to be used for model selection):
+
+- ResNet-50: acc 0.9081, prec 0.9409, rec 0.8686, F1 0.9033,
+  ROC-AUC 0.9682; TN 568, FP 32, FN 77, TP 509; AI recall 0.8686,
+  AI FNR 0.1314, Real recall 0.9467, FPR 0.0533.
+- EfficientNet-B0: acc 0.9073, prec 0.9034, rec 0.9096, F1 0.9065,
+  ROC-AUC 0.9649; TN 543, FP 57, FN 53, TP 533; AI recall 0.9096,
+  AI FNR 0.0904, Real recall 0.9050, FPR 0.0950.
+
+Observation (not a selection): both models land within 0.001 accuracy;
+ResNet-50 leans precise (fewer Real false alarms, more missed AI),
+EfficientNet-B0 leans sensitive (fewer missed AI, more false alarms).
+Primary-model choice for notebook 03 is a team decision, still open.
+
+### Verification
+
+- Test counts asserted in-script (1,186; {0:600, 1:586}); CM cells
+  sum to 1,186 and reconcile with class counts for both models.
+- Eval script ran from system temp dir; repo holds only results/docs.
+- `evaluate_model` (Person 2) consumed unchanged with default
+  threshold; model code and weights untouched.
+
+### Problems / Solutions
+
+None in this step.
+
+### Status
+
+COMPLETED (clean test baselines measured and committed on
+`krish-branch`; robustness experiments NOT run).

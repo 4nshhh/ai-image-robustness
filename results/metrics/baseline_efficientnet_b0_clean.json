@@ -1,0 +1,37 @@
+{
+  "accuracy": 0.9072512647554806,
+  "precision": 0.9033898305084745,
+  "recall": 0.909556313993174,
+  "f1": 0.9064625850340136,
+  "ai_recall": 0.909556313993174,
+  "ai_false_negative_rate": 0.09044368600682595,
+  "real_recall": 0.905,
+  "false_positive_rate": 0.09499999999999997,
+  "confusion_matrix": [
+    [
+      543,
+      57
+    ],
+    [
+      53,
+      533
+    ]
+  ],
+  "tn": 543,
+  "fp": 57,
+  "fn": 53,
+  "tp": 533,
+  "n_samples": 1186,
+  "n_positive": 586,
+  "n_negative": 600,
+  "roc_auc": 0.9649018771331059,
+  "experiment": "baseline_efficientnet_b0_clean",
+  "model": "efficientnet_b0",
+  "threshold": 0.5,
+  "test_n": 1186,
+  "test_real": 600,
+  "test_ai": 586,
+  "checkpoint": "models/baseline/efficientnet_b0_best.pth",
+  "eval_batch_size": 32,
+  "device": "NVIDIA GeForce RTX 3050 Laptop GPU"
+}
