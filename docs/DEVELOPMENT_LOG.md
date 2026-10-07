@@ -984,3 +984,98 @@ test 1,186 (600 Real / 586 AI). Manifest `path` values keep their
 
 COMPLETED (dataset finalized at 7,986; committed on `krish-branch`;
 no experiments run yet).
+
+---
+
+## Development Step: Baseline ML Foundation (Person 1 Track)
+
+### What We Did
+
+Implemented the reusable Person 1 ML foundation on `krish-branch`
+(Person 1 scope): `src/preprocessing.py`, `src/dataset.py`,
+`src/model.py`, `src/train.py` (all previously docstring-only
+placeholders), plus `tests/test_ml_foundation.py` (39-check suite, all
+passing) and the `notebooks/02_baseline_training.ipynb` scaffold
+(21 cells). No full training run; no experiment results exist.
+
+### Why
+
+Baseline training cannot start until the dataset, preprocessing, models,
+and training loop share one tested code path with fixed label mapping
+and no test-data contact. This unblocks the ResNet-50 / EfficientNet-B0
+clean baselines while keeping Person 2's transformation/evaluation code
+untouched.
+
+### Files / Components
+
+- `src/preprocessing.py` — `IMAGE_SIZE = 224` documented standard input
+  for both models; fixed ImageNet mean/std (no statistics fitted on
+  project data); `load_image` (PIL -> RGB, robust to L/P/RGBA JPEG+PNG);
+  deterministic train core (direct resize) with optional mild
+  `RandomHorizontalFlip` (`augment=True`, train only); eval pipeline with
+  no randomness by construction (`get_transform` raises on val/test
+  augmentation). No JPEG/robustness logic here by design.
+- `src/dataset.py` — `GenImageDataset` over the finalized 7,986-row
+  manifest (source of truth for split/label/generator); local paths
+  resolved as `root/split/label/filename` via pathlib (manifest `path`
+  column ignored: non-portable `/kaggle/working/...` prefix); explicit
+  `LABEL_MAP = {"real": 0, "ai": 1}`; unknown labels raise instead of
+  guessing; optional metadata return; `load_manifest` rejects missing
+  files. Verified counts: train 5,600 (2,800/2,800), val 1,200
+  (600/600), test 1,186 (600 Real / 586 AI).
+- `src/model.py` — `build_model("resnet50" | "efficientnet_b0",
+  pretrained=...)` with 2-class heads (`fc` / `classifier[1]`,
+  `[B, 2]` logits for CrossEntropyLoss); modern `weights=` API with
+  `pretrained=` fallback; `save/checkpoint` bundle carries model name,
+  label map, and extras; no custom architectures.
+- `src/train.py` — one shared loop for both models: `TrainConfig`
+  dataclass (optimizer adam/adamw/sgd, lr, weight decay, epochs, seed 42,
+  CPU/CUDA auto device), seeded DataLoaders (train/val only — no test
+  loader exists in the module), train/val loss+accuracy history,
+  best-validation-accuracy checkpointing, CLI flags. Test data cannot
+  influence selection: it is never loaded here.
+- `tests/test_ml_foundation.py` — stdlib-assert suite (no pytest):
+  manifest counts/labels/existence, label-column-over-filename proof,
+  RGB handling, tensor shapes, eval determinism, both model forward
+  passes, checkpoint round-trip, and a 1-epoch CPU smoke run on 8
+  train + 4 val images with checkpoint/history verification.
+- `notebooks/02_baseline_training.ipynb` — 10-section scaffold
+  (config, seed/device, loading, sanity checks, model, training,
+  validation, checkpoint, test-eval placeholder, results placeholder);
+  test evaluation explicitly deferred to notebook 03; zero fabricated
+  values.
+
+### Implementation Details
+
+Team decisions: 224px direct-resize geometry shared by train/eval for
+baseline interpretability; augmentation defaults OFF; ImageNet
+normalization (pretrained weights); validation-accuracy checkpoint
+selection; seed 42 with documented CUDA nondeterminism limits.
+AI-assisted implementation: modules and tests were AI-scaffolded, then
+reviewed, bug-fixed (see below), and test-verified by the team member.
+
+### Verification
+
+- `python tests/test_ml_foundation.py`: ALL 39 CHECKS PASSED on CPU
+  (torch 2.14.0+cpu, no CUDA on this machine).
+- Smoke run used exactly the 8/4 subset (asserted via accuracy
+  fractions). Reported smoke values (e.g. loss ~0.68, acc 0.50) are
+  random-initialization dummy artifacts, NOT project results.
+- Notebook parses as JSON (nbformat 4, 21 cells).
+
+### Problems / Solutions
+
+- First background test run silently trained 1 epoch on the FULL train
+  set on CPU: `fit()` built its own loaders and ignored the test's
+  subset indices (fractional accuracies 0.5425/0.6183 exposed it — they
+  are impossible on 8/4 samples). Fixed by adding `train_indices` /
+  `val_indices` to `TrainConfig`, threading them into `fit()`, and
+  adding the subset-fraction assertion. No dataset files were modified,
+  no test data was involved, and all artifacts went to temp dirs.
+  Resolved; suite re-run green.
+
+### Status
+
+COMPLETED (foundation implemented and tested; committed on
+`krish-branch`; full 5,600-image training NOT run; Person 2 files
+untouched).
