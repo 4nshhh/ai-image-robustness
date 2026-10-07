@@ -818,3 +818,169 @@ None.
 ### Status
 
 IN PROGRESS (protocol defined; awaiting Person 1 deliverables).
+
+---
+
+## Development Step: Finalized Dataset Extraction and Verification (krish-branch)
+
+### What We Did
+
+Extracted and verified the finalized dataset ZIP on `krish-branch`.
+All work stayed on `krish-branch`; `main` and teammates' branches untouched.
+No training started; `src/preprocessing.py`, `src/model.py`, and training
+code untouched; no images modified, resized, renamed, resampled, or
+regenerated. The original ZIP was preserved in `data/downloads/`.
+
+### Why
+
+The finalized 8,000-image split is the Person 1 -> Person 2 handoff basis
+(train/val/test must be fixed before any baseline or robustness experiment),
+so its on-disk contents had to be verified against the expected counts
+before use.
+
+### Files / Components
+
+- Source: `data/downloads/genimage_8000_final (1).zip`
+  (1,888,200,231 bytes). NOTE: the file on disk carries the ` (1)` suffix;
+  `data/downloads/genimage_8000_final.zip` (exact name from the task) does
+  not exist. Extraction used the existing file as-is; it was not renamed,
+  moved, or deleted.
+- Destination: `data/splits/genimage_8000_split_v4/` with `train/`, `val/`,
+  `test/`, `manifest.csv`, `split_metadata.json`.
+- `.gitignore` extended (uncommitted): `data/downloads/` plus image
+  extensions under `data/splits/**`, so the ZIP and extracted images can
+  never be committed; `manifest.csv` / `split_metadata.json` stay trackable.
+
+### Implementation Details
+
+- Extraction via Python `zipfile` (`extractall` into the destination dir).
+- Counts on disk: train/ai 2,800; train/real 2,800; val/ai 600;
+  val/real 600; test/ai 586; test/real 600. Total images on disk: 7,986
+  (expected 8,000; shortfall 14, all in `test/ai`).
+- The ZIP itself contains exactly these files (7,986 images + manifest +
+  metadata), so nothing was lost during extraction — the shortfall is in
+  the source ZIP.
+- `manifest.csv` exists with 8,000 rows and the expected declared
+  distribution (incl. 600 `test/ai`), so 14 manifest rows reference files
+  absent from the ZIP/disk: `test/ai/adm_00025.png`, `adm_00051.png`,
+  `biggan_00016.png`, `glide_00016.png`, `glide_00044.png`,
+  `midjourney_00031.png`, `midjourney_00060.png`, `sdv5_00019.png`,
+  `sdv5_00048.png`, `wukong_00021.png`, `wukong_00029.png`,
+  `wukong_00036.png`, `wukong_00041.png`, `wukong_00070.png`. No
+  extra files on disk outside the manifest; no zero-byte or sub-1KB files;
+  extensions only `.jpeg` (4,000, Real) and `.png` (3,986, AI).
+- `split_metadata.json` exists and declares 8,000 total / test ai 600,
+  which matches the manifest but NOT the 586 `test/ai` files present.
+- Manifest `path` column uses the absolute prefix
+  `/kaggle/working/genimage_8000_split_v4/...`; only the
+  `split/label/filename` suffix matches this machine (portability note,
+  not a data error).
+- AI-assisted implementation: extraction/verification scripts were
+  AI-generated throwaway files run from the repo root and deleted
+  afterward; the repo contains no leftover verification scripts.
+
+### Verification
+
+- `git rev-parse --abbrev-ref HEAD` = `krish-branch` (before and after).
+- ZIP entry listing: 7,988 file entries (7,986 images + manifest +
+  metadata), per-class counts as above.
+- Post-extraction disk counts re-checked per directory; manifest-vs-disk
+  join on `split/label/filename` gives 14 missing, 0 extra.
+- Image integrity: full PIL `verify()` + `load()` over all 7,986 present
+  images — checked 7,986, ok 7,986, corrupted 0 (a 300-image stratified
+  sample also passed 300/300 earlier). Full scan completed without timeout
+  in the background run.
+- Git safety: `git check-ignore` confirms the ZIP is ignored;
+  `manifest.csv` / `split_metadata.json` remain visible to Git;
+  `git status --short` shows only `M .gitignore` and untracked `data/`
+  (images/ZIP hidden by ignore rules). Nothing committed (no commit was
+  requested).
+- Original ZIP still present in `data/downloads/` after extraction.
+
+### Problems / Solutions
+
+- ZIP filename mismatch (`genimage_8000_final (1).zip` vs expected
+  `genimage_8000_final.zip`): proceeded with the existing file without
+  renaming/deleting; flagged for the team to confirm canonical naming.
+- 14 `test/ai` files missing relative to manifest/metadata: recorded
+  exactly; NOT patched by inventing data. Awaiting team decision
+  (re-supply the 14 files vs accept 586 and amend manifest/metadata).
+- Full PIL scan initially timed out at the 120 s foreground limit;
+  re-ran as a background job to completion (7,986/7,986 ok).
+
+### Status
+
+COMPLETED with a FAILED exact-count verification: structure, manifest
+(8,000 rows), metadata file, and integrity of present images all pass,
+but on-disk total is 7,986 vs expected 8,000 (`test/ai` 586 vs 600).
+No training run; no model/preprocessing changes; awaiting next instruction.
+
+---
+
+## Development Step: Finalize 7,986-Image Dataset (Methodological Decision)
+
+### What We Did
+
+Accepted the 7,986 physically present images as the final dataset on
+`krish-branch`. Pruned `manifest.csv` to the 7,986 present files only
+(removed exactly the 14 absent `test/ai` rows; every other row
+byte-identical, verified by multiset comparison against a backup).
+Recomputed `split_metadata.json` from the pruned manifest (totals,
+class counts, per-generator split counts) and added an `integrity_note`.
+No image bytes touched; no preprocessing/model/training/notebook/
+transformation code touched. AI-assisted implementation: throwaway scripts
+in the system temp dir (repo kept clean); original 8,000-row manifest
+backed up to temp before editing.
+
+### Why
+
+Exact recovery of the 14 missing `test/ai` files was investigated and
+proven impossible from available sources: absent from the ZIP under
+`test/ai/`, no other local archive/extraction/cache copy, Kaggle source
+directory not accessible. Train/val same-named files are different images
+(14/14 different SHA-256) and were explicitly rejected as substitutes.
+The cross-split SHA-256 audit found zero exact-duplicate groups among the
+7,986 present images, so the remaining dataset has no content-level
+leakage. Leaving a manifest that declares 14 nonexistent files would be a
+worse methodological error than formally accepting 7,986.
+
+### Files / Components
+
+- `data/splits/genimage_8000_split_v4/manifest.csv`: 8,000 → 7,986 rows
+  (columns unchanged). Removed (all `test/ai`): adm_00025, adm_00051,
+  biggan_00016, glide_00016, glide_00044, midjourney_00031,
+  midjourney_00060, sdv5_00019, sdv5_00048, wukong_00021, wukong_00029,
+  wukong_00036, wukong_00041, wukong_00070 (.png).
+- `data/splits/genimage_8000_split_v4/split_metadata.json`: total 7,986
+  (Real 4,000 / AI 3,986); test 1,186 (600 Real / 586 AI); per-generator
+  test: adm 85, biggan 84, glide 83, midjourney 83, sdv5 84, vqdm 86,
+  wukong 81; `split_ratio` kept as intended design; `integrity_note` added.
+- `docs/experiment_log.md`: brief dataset-decision entry (test n = 1,186).
+
+### Implementation Details
+
+Final composition: train 5,600 (2,800/2,800), val 1,200 (600/600),
+test 1,186 (600 Real / 586 AI). Manifest `path` values keep their
+`/kaggle/working/...` prefix (portability note from the earlier entry).
+
+### Verification
+
+- Manifest 7,986 rows; every manifest file exists on disk; zero extra
+  image files outside the manifest.
+- Split/class counts: train 5,600; val 1,200; test 1,186; Real 4,000;
+  AI 3,986; test Real 600; test AI 586.
+- Full PIL verify+load over all 7,986 images: 0 corrupted.
+- Full SHA-256 over all 7,986 images: 7,986 distinct hashes, 0 duplicates.
+- `preprocessing.py`, `model.py`, `train.py`, notebooks, transformation
+  code confirmed unmodified via `git status` (only the four intended
+  files staged/committed).
+
+### Problems / Solutions
+
+- None in this step; the missing-14 problem was characterized in prior
+  entries and resolved here by team decision, not by data fabrication.
+
+### Status
+
+COMPLETED (dataset finalized at 7,986; committed on `krish-branch`;
+no experiments run yet).

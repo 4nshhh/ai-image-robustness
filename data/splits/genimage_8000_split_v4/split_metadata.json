@@ -1,0 +1,78 @@
+{
+  "dataset": "Tiny-GenImage",
+  "total_images": 7986,
+  "real_images": 4000,
+  "ai_images": 3986,
+  "seed": 42,
+  "split_ratio": {
+    "train": 0.7,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "class_counts": {
+    "train": {
+      "real": 2800,
+      "ai": 2800
+    },
+    "val": {
+      "real": 600,
+      "ai": 600
+    },
+    "test": {
+      "real": 600,
+      "ai": 586
+    }
+  },
+  "generator_summary": {
+    "adm": {
+      "original": 571,
+      "train": 400,
+      "val": 84,
+      "test": 85,
+      "total": 569
+    },
+    "biggan": {
+      "original": 571,
+      "train": 400,
+      "val": 86,
+      "test": 84,
+      "total": 570
+    },
+    "glide": {
+      "original": 571,
+      "train": 400,
+      "val": 86,
+      "test": 83,
+      "total": 569
+    },
+    "midjourney": {
+      "original": 571,
+      "train": 400,
+      "val": 86,
+      "test": 83,
+      "total": 569
+    },
+    "sdv5": {
+      "original": 572,
+      "train": 400,
+      "val": 86,
+      "test": 84,
+      "total": 570
+    },
+    "vqdm": {
+      "original": 572,
+      "train": 400,
+      "val": 86,
+      "test": 86,
+      "total": 572
+    },
+    "wukong": {
+      "original": 572,
+      "train": 400,
+      "val": 86,
+      "test": 81,
+      "total": 567
+    }
+  },
+  "integrity_note": "Original target was 8000 images. 14 test/ai files were absent from the exported ZIP and unrecoverable locally (train/val same-named files are different images by SHA-256 and were not substituted). Cross-split SHA-256 audit of the 7986 present images found zero exact duplicates. Team decision: accept a final 7986-image dataset (test 600 Real / 586 AI). split_ratio records the intended design."
+}
