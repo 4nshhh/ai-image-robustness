@@ -1799,3 +1799,61 @@ that compression alone caused the baseline degradation.
 
 COMPLETED (evaluation measured and saved; uncommitted; error-analysis /
 Streamlit NOT started per task scope).
+
+---
+
+## Development Step: Experiment 7 — Visualization and Analysis Summary
+
+### What We Did
+
+Added and ran `scripts/plot_robustness_results.py` on `ansh-branch`
+(Person 2 scope): validates the saved Experiment 6 CSVs, renders 7
+report figures into `results/graphs/`, and generates
+`results/metrics/robustness_analysis_summary.md` computed from the CSVs.
+No inference, no training, no test access, no `src/` changes.
+
+### Why
+
+Decision-ready figures and a report summary derived reproducibly from the
+validated numbers, with all deltas computed (percentage points) rather
+than hardcoded.
+
+### Files / Components
+
+- `scripts/plot_robustness_results.py` (new, uncommitted): schema/row/
+  finiteness/n=1186/CM-sum/delta-consistency validation (exit 1 on any
+  failure); grouped bars (AI recall, accuracy, AI FNR across 15
+  conditions); AI recall vs JPEG quality and vs resize scale with clean
+  references; 2×4 confusion-matrix heatmaps (clean, JPEG Q30, resize
+  0.25, C3) per model; all at 150 dpi with labels/legends.
+- `results/graphs/`: 7 PNGs (ai_recall/accuracy/ai_fnr_all_conditions,
+  ai_recall_vs_jpeg_quality, ai_recall_vs_resize_scale,
+  confusion_matrices_key_conditions_{baseline,robust}).
+- `results/metrics/robustness_analysis_summary.md`: clean trade-off
+  (−1.77pp acc, +1.02pp AI recall), top-5 AI-recall gains (C3 +36.69 …
+  recomp Q50 +21.67), regressions (resize_050 −0.85, resize_075 −0.68),
+  unseen-condition results, and limits incl. the Real-JPEG/AI-PNG
+  format confound.
+
+### Implementation Details
+
+Key findings (computed, not claimed): robust training helps everywhere
+except negligible resize_075/050 AI-recall dips; unseen conditions all
+improve; resize_025 stays weakest absolute for both models.
+
+### Verification
+
+- Script output: source validation OK; all 8 paths exist and non-empty
+  (44–61 KB PNGs, 1.6 KB md). Command:
+  `conda run -n ml_clean python scripts/plot_robustness_results.py`.
+- Two script bugs fixed before the green run (comparison-column filter
+  matching `delta_pp_*`; DataFrame-vs-Series `.items()` in regressions
+  loop; tight_layout warning on colorbar figures). Source CSVs untouched.
+
+### Problems / Solutions
+
+- None in data; script bugs above fixed and re-run green.
+
+### Status
+
+COMPLETED (figures + summary generated; uncommitted).
