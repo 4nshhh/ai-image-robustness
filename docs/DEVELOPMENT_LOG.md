@@ -1984,3 +1984,123 @@ this diagnostic.
 ### Status
 
 COMPLETED (diagnostic measured and saved; uncommitted).
+
+---
+
+## Development Step: Experiment 10 — Streamlit Research Demo
+
+### What We Did
+
+Implemented `app/app.py` on `ansh-branch` (Person 2 scope): Streamlit demo
+loading both frozen EfficientNet-B0 checkpoints (cached per session),
+upload + RGB decode, optional JPEG/resize input demos via existing
+helpers, side-by-side predicted class + raw AI score, research disclaimer.
+Also updated the README Streamlit section with run instructions. No
+checkpoints, data, or results modified.
+
+### Why
+
+Demonstration layer for the finished baseline-vs-robust comparison, per
+AGENTS.md application requirements.
+
+### Files / Components
+
+- `app/app.py` (rewrote scaffold): `load_checkpoint` + `get_transform`
+  reuse (same RGB/224/ImageNet path, label map asserted, `[1,2]` logits
+  asserted); `st.cache_resource` session-once loading with actionable
+  missing-checkpoint errors; JPEG Q90–Q30 / resize 0.75–0.25 demos with
+  input-only warning; eval-mode no-grad inference on CUDA-if-available;
+  invalid-file and inference-failure handling; disclaimer (predictions ≠
+  proof, format bias known, unseen sources unestablished).
+- `README.md`: Streamlit section only (run command + checkpoint note).
+
+### Implementation Details
+
+Design: predicted class (threshold 0.5) displayed separately from the raw
+AI score, explicitly labeled NOT calibrated confidence.
+
+### Verification
+
+- Headless checks (temp script, repo kept clean; Streamlit 1.54.0):
+  import OK; both checkpoints load on CUDA in eval mode; RGB preprocess
+  yields (3,224,224); baseline pred=1 score 0.9327 / robust pred=1 score
+  0.8278 on a synthetic image (smoke values, not results); resize+jpeg
+  demo path OK; garbage upload raises UnidentifiedImageError (caught).
+  ALL APP CHECKS PASSED.
+- `streamlit run app/app.py --server.headless true` boots; health
+  endpoint returns ok. Full browser interaction NOT tested (headless
+  environment) — stated limitation.
+- `git status` scope: app + README (+ this log edit); checkpoints/data/
+  results untouched; nothing committed.
+
+### Problems / Solutions
+
+- None in code. Bare-mode ScriptRunContext warning in headless test is
+  expected Streamlit behavior, not a defect.
+
+### Status
+
+COMPLETED (demo implemented and smoke-tested; uncommitted).
+
+---
+
+## Development Step: Dashboard Refactor — AI Image Robustness Lab (replaces prediction demo)
+
+### What We Did
+
+Permanently replaced the Experiment 10 image-prediction demo with a
+read-only research dashboard on `ansh-branch` (Person 2 scope): rewrote
+`app/app.py` as AI Image Robustness Lab (Overview, Transformation
+Experiments, Baseline vs Robust, Dataset Bias & Format, Methodology &
+Limitations tabs); updated the README Streamlit section (purpose, run,
+artifacts, deployment, limits). No other files touched.
+
+### Why
+
+Team decision: the public artifact communicates completed results; it must
+not classify arbitrary uploads or imply reliable authenticity detection.
+
+### Files / Components
+
+- `app/app.py` (rewritten): zero torch/checkpoint/upload/inference code
+  (verified by search — sole `.pth` mention is a prose path); cached
+  read-only loads of the 30-row eval CSV, comparison CSVs (incl. format),
+  bias audit CSV/JSON, summary md, split metadata, manifest generators,
+  robust-training config/history; schema + delta-consistency validation
+  with visitor-friendly errors; grouped bars, sweeps, pp-delta tables,
+  side-by-side comparison with direction-aware notes, per-model CM tables,
+  bias/format/methodology sections with observation/interpretation/unproven
+  separation.
+- `README.md`: Streamlit section rewritten for the dashboard.
+- `requirements.txt`: unchanged (torch retained for research scripts;
+  streamlit/matplotlib/pandas already listed — no env rewrite).
+
+### Implementation Details
+
+Preflight found: app entry `app/app.py` (prediction demo); all result
+artifacts present (only prior uncommitted changes were README/app/dev-log
+from Experiment 10 — preserved and built upon); no deployment config
+exists (Streamlit Community Cloud assumed; entry `app/app.py`); total
+predictions CSVs ~7 MB stay out of the dashboard's load path (metrics +
+small JSONs only); checkpoints/raw images never needed by the app.
+
+### Verification
+
+- Headless `load_all()`: 30/15/6/6 rows, no torch imported — OK.
+- Full `AppTest.from_file(...).run(timeout=120)`: 5 tabs, 4 metric cards,
+  5 dataframes, zero exceptions, zero error elements — OK.
+- `streamlit run --server.headless` boots; health endpoint ok. Browser
+  interaction and live deployment NOT tested — stated limitations.
+- `git status` scope: app + README (+ this log edit); all research
+  artifacts, checkpoints, splits untouched; nothing committed.
+
+### Problems / Solutions
+
+- None in dashboard code (written with the corrected validation patterns
+  from the start). AppTest default 3 s timeout was environmental — reran
+  with timeout=120 and passed. No source-data inconsistencies found.
+
+### Status
+
+COMPLETED (dashboard implemented and tested headless; uncommitted; not
+deployed).

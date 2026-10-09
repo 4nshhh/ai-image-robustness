@@ -46,9 +46,26 @@ See `docs/results_summary.md` and `docs/experiment_log.md`. Status: NOT RUN — 
 
 TBD — pending implementation.
 
-## Streamlit App
+## Streamlit App — AI Image Robustness Lab (read-only dashboard)
 
-TBD — pending implementation (`app/app.py` is a placeholder).
+Presents the completed experimental results (Experiments 1–9) in five
+sections: Overview, Transformation Experiments, Baseline vs Robust,
+Dataset Bias & Format, Methodology & Limitations. It does NOT classify
+uploaded images, load model checkpoints, or need a GPU or the raw dataset —
+it reads only the small saved artifacts under `results/metrics/` and
+`results/experiment_logs/` (plus the split manifest/metadata).
+
+```powershell
+streamlit run app/app.py
+```
+
+Public deployment (e.g. Streamlit Community Cloud): entry point
+`app/app.py`; no secrets required; required artifacts are the committed
+CSVs/JSONs/Markdown under `results/` (checkpoints and raw images stay
+untracked and are never needed by the app).
+
+Scientific limits: results apply to the evaluated dataset/conditions only;
+the Real-JPEG / AI-PNG format confound is disclosed in the dashboard.
 
 ## Team Contributions
 
