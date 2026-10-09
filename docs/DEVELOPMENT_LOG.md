@@ -1652,3 +1652,75 @@ None in the run.
 
 COMPLETED (Experiment 4 measured and saved; uncommitted; robust-training /
 error-analysis / Streamlit NOT started per task scope).
+
+---
+
+## Development Step: Experiment 5 — Robust Training Implementation (scripts/train_robust.py)
+
+### What We Did
+
+Implemented (NOT run) the transformation-aware fine-tuning entry point on
+`ansh-branch` (Person 2 scope): new `scripts/train_robust.py` following the
+approved Phase A decisions and the Section 6 protocol rules. No training
+loop executed; no test data accessed; no `src/` modified.
+
+### Why
+
+Robust training needs a dedicated path: existing `fit()` always builds a
+fresh model (no checkpoint init) and only offers flip augmentation, so the
+approved policy (baseline init + stochastic robustness transforms) cannot
+run through it without damage. The new script reuses `set_seed`,
+`build_optimizer`, `train_one_epoch`, `validate`, `GenImageDataset`,
+`load_checkpoint`, `get_transform`, and all four transformation functions.
+
+### Files / Components
+
+- `scripts/train_robust.py` (new, uncommitted): fixed policy constants
+  (clean 40 / JPEG 20 Q{90,70,50,30} / resize 15 {0.75,0.50} / recomp 15
+  Q{90,70} p2 / combined 10 {C1,C2}; unseen reserved: 0.25, recomp
+  Q50/Q30, C3); `sample_augmentation(rng)` + `RobustTrainTransform`
+  (fresh PIL copy, per-worker `Random` streams seeded from (42, wid),
+  base = clean train preprocessing, augment OFF); entry asserts train
+  5,600 (2800/2800) and val 1,200 (600/600) from the manifest, loads
+  `efficientnet_b0_best.pth` (arch + Linear(...,2) head verified, all
+  params trainable), enforces CUDA (`RuntimeError`, no fallback), runs
+  10 epochs (adam, lr/weight-decay 1e-4, batch 16, num_workers 0),
+  selects best clean-val accuracy (tie → lower val loss, then earlier),
+  writes `models/robust/efficientnet_b0_robust_best.pth` + history +
+  config/policy JSONs, and refuses to overwrite existing outputs without
+  `--overwrite`. No test split is ever constructed.
+
+### Implementation Details
+
+Decisions (all from the approved spec, none improvised): fine-tune all
+params from the baseline checkpoint; policy probabilities sum to 1.0
+(asserted in code); combined C1/C2 use scale 0.50 + Q50 in exact order;
+val preprocessing deterministic clean; gitignored `.pth`, trackable JSONs.
+
+### Verification (permitted checks only; temp scripts, repo kept clean)
+
+- `py_compile` + import: OK.
+- 40k-draw sampler test (seed 42): clean 0.4029, JPEG 0.1961, resize
+  0.1504, recomp 0.1505, C1 0.0496/C2 0.0505; all levels uniform — OK.
+- Same-seed identical sequences; wrapper preserves source size, outputs
+  [3,224,224] — OK.
+- C1/C2 pixel-identical to manual ordered application; `clean` maps to
+  None; sampler contains no label branching — OK.
+- No `split="test"` / test-manifest pattern in the entry point — OK.
+- Checkpoint compatibility: bundle efficientnet_b0, Linear head
+  out_features 2, all params trainable — OK.
+- Training loop NOT executed; test images NOT accessed; baseline
+  files/results untouched.
+
+### Problems / Solutions
+
+- Shell lacked `conda`/`python` on PATH in this session; used the full
+  `anaconda3\Scripts\conda.exe` path. No repo impact. (Pillow
+  `getdata` deprecation warnings appeared in the temp test only.)
+
+### Status
+
+COMPLETED (implementation + checks; uncommitted; training NOT started;
+test evaluation NOT run).
+
+Launch later with: `conda run -n ml_clean python scripts/train_robust.py`
