@@ -1918,3 +1918,69 @@ format signal, and the report must say so.
 ### Status
 
 COMPLETED (audit measured and saved; uncommitted).
+
+---
+
+## Development Step: Experiment 9 — Format-Normalization Diagnostic
+
+### What We Did
+
+Added and ran `scripts/run_format_diagnostic.py` on `ansh-branch`
+(Person 2 scope): frozen baseline + robust EfficientNet-B0 checkpoints on
+the same 1,186-image test set under clean, lossless-PNG re-encode, and
+JPEG Q95 with 4:4:4 subsampling (script-local BytesIO helpers; decoded-RGB
+copies re-encoded BEFORE unchanged 224x224 preprocessing). Eval only,
+threshold 0.5, CUDA, no tuning, no modifications to data or checkpoints.
+
+### Why
+
+Experiment 8 proved perfect Real-JPEG / AI-PNG separation in metadata; this
+diagnostic measures checkpoint response when inputs are normalized to a
+common container at (near-)lossless fidelity.
+
+### Files / Components
+
+- `scripts/run_format_diagnostic.py` (new, uncommitted).
+- `results/metrics/format_diagnostic_efficientnet_b0.csv` (6 rows),
+  `results/metrics/baseline_vs_robust_format_efficientnet_b0.csv` (3 rows),
+  `results/predictions/…` (7,116 rows), `results/confusion_matrices/…`
+  (6 rows), 6 per-model-condition JSON logs.
+
+### Implementation Details
+
+ACTUAL RESULTS (n=1,186 each; descriptive only):
+
+| Model | Condition | Acc | AI Rec | AI FNR | AUC | CM |
+|---|---|---|---|---|---|---|
+| baseline | clean | 0.9073 | 0.9096 | 0.0904 | 0.9649 | [[543,57],[53,533]] |
+| baseline | png | 0.9073 | 0.9096 | 0.0904 | 0.9649 | identical |
+| baseline | jpeg_q95 | 0.8988 | 0.8857 | 0.1143 | 0.9601 | [[547,53],[67,519]] |
+| robust | clean | 0.8895 | 0.9198 | 0.0802 | 0.9591 | [[516,84],[47,539]] |
+| robust | png | 0.8895 | 0.9198 | 0.0802 | 0.9591 | identical |
+| robust | jpeg_q95 | 0.8862 | 0.9096 | 0.0904 | 0.9560 | [[518,82],[53,533]] |
+
+Key measured finding: lossless PNG re-encoding changes NOTHING
+(bit-identical predictions — expected, since the pipeline already decodes
+to RGB; the container alone carries no signal to these classifiers).
+JPEG Q95 costs little (baseline AI recall −2.39pp, robust −0.90pp).
+This does NOT identify shortcut use and does NOT normalize away bias:
+heavy-compression degradations (Exp 1/3) reflect lossy pixel damage, not
+container identity — a hypothesis consistent with, but not proven by,
+this diagnostic.
+
+### Verification
+
+- Command: `conda run -n ml_clean python scripts/run_format_diagnostic.py`
+  (EXIT True). 6 rows / 3 comparison rows / 7,116 predictions / 6 logs;
+  n=1,186, 600/586, y_true identical, finite probs, baseline clean within
+  1e-4, params bit-identical, files untouched, all-CUDA.
+- `git status`: only new Experiment 9 files + script (+ this log edit);
+  prior outputs/src/checkpoints untouched; nothing committed.
+
+### Problems / Solutions
+
+- None.
+
+### Status
+
+COMPLETED (diagnostic measured and saved; uncommitted).
