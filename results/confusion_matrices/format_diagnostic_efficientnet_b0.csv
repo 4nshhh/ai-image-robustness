@@ -1,0 +1,7 @@
+model,condition,tn,fp,fn,tp
+baseline,clean,543,57,53,533
+baseline,png,543,57,53,533
+baseline,jpeg_q95,547,53,67,519
+robust,clean,516,84,47,539
+robust,png,516,84,47,539
+robust,jpeg_q95,518,82,53,533

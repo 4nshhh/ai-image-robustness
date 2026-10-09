@@ -1652,3 +1652,455 @@ None in the run.
 
 COMPLETED (Experiment 4 measured and saved; uncommitted; robust-training /
 error-analysis / Streamlit NOT started per task scope).
+
+---
+
+## Development Step: Experiment 5 — Robust Training Implementation (scripts/train_robust.py)
+
+### What We Did
+
+Implemented (NOT run) the transformation-aware fine-tuning entry point on
+`ansh-branch` (Person 2 scope): new `scripts/train_robust.py` following the
+approved Phase A decisions and the Section 6 protocol rules. No training
+loop executed; no test data accessed; no `src/` modified.
+
+### Why
+
+Robust training needs a dedicated path: existing `fit()` always builds a
+fresh model (no checkpoint init) and only offers flip augmentation, so the
+approved policy (baseline init + stochastic robustness transforms) cannot
+run through it without damage. The new script reuses `set_seed`,
+`build_optimizer`, `train_one_epoch`, `validate`, `GenImageDataset`,
+`load_checkpoint`, `get_transform`, and all four transformation functions.
+
+### Files / Components
+
+- `scripts/train_robust.py` (new, uncommitted): fixed policy constants
+  (clean 40 / JPEG 20 Q{90,70,50,30} / resize 15 {0.75,0.50} / recomp 15
+  Q{90,70} p2 / combined 10 {C1,C2}; unseen reserved: 0.25, recomp
+  Q50/Q30, C3); `sample_augmentation(rng)` + `RobustTrainTransform`
+  (fresh PIL copy, per-worker `Random` streams seeded from (42, wid),
+  base = clean train preprocessing, augment OFF); entry asserts train
+  5,600 (2800/2800) and val 1,200 (600/600) from the manifest, loads
+  `efficientnet_b0_best.pth` (arch + Linear(...,2) head verified, all
+  params trainable), enforces CUDA (`RuntimeError`, no fallback), runs
+  10 epochs (adam, lr/weight-decay 1e-4, batch 16, num_workers 0),
+  selects best clean-val accuracy (tie → lower val loss, then earlier),
+  writes `models/robust/efficientnet_b0_robust_best.pth` + history +
+  config/policy JSONs, and refuses to overwrite existing outputs without
+  `--overwrite`. No test split is ever constructed.
+
+### Implementation Details
+
+Decisions (all from the approved spec, none improvised): fine-tune all
+params from the baseline checkpoint; policy probabilities sum to 1.0
+(asserted in code); combined C1/C2 use scale 0.50 + Q50 in exact order;
+val preprocessing deterministic clean; gitignored `.pth`, trackable JSONs.
+
+### Verification (permitted checks only; temp scripts, repo kept clean)
+
+- `py_compile` + import: OK.
+- 40k-draw sampler test (seed 42): clean 0.4029, JPEG 0.1961, resize
+  0.1504, recomp 0.1505, C1 0.0496/C2 0.0505; all levels uniform — OK.
+- Same-seed identical sequences; wrapper preserves source size, outputs
+  [3,224,224] — OK.
+- C1/C2 pixel-identical to manual ordered application; `clean` maps to
+  None; sampler contains no label branching — OK.
+- No `split="test"` / test-manifest pattern in the entry point — OK.
+- Checkpoint compatibility: bundle efficientnet_b0, Linear head
+  out_features 2, all params trainable — OK.
+- Training loop NOT executed; test images NOT accessed; baseline
+  files/results untouched.
+
+### Problems / Solutions
+
+- Shell lacked `conda`/`python` on PATH in this session; used the full
+  `anaconda3\Scripts\conda.exe` path. No repo impact. (Pillow
+  `getdata` deprecation warnings appeared in the temp test only.)
+
+### Status
+
+COMPLETED (implementation + checks; uncommitted; training NOT started;
+test evaluation NOT run).
+
+Launch later with: `conda run -n ml_clean python scripts/train_robust.py`
+
+---
+
+## Development Step: Experiment 6 — Baseline vs Robust Evaluation (EfficientNet-B0)
+
+### What We Did
+
+Implemented and ran the head-to-head evaluation on `ansh-branch`
+(Person 2 scope): new `scripts/run_robust_evaluation.py` evaluating the
+frozen baseline checkpoint AND the epoch-8 robust checkpoint
+(`models/robust/efficientnet_b0_robust_best.pth`, trained 10 epochs per
+the committed history: best clean-val 0.9008) on the same 1,186-image
+test set under all 15 protocol conditions (clean + JPEG x4 + resize x3 +
+recompression x4 + combined x3). Eval only; no retraining, no tuning.
+
+### Why
+
+The primary research question: does transformation-aware training improve
+robustness while preserving clean performance? Both models share test
+images, order, labels, preprocessing, threshold 0.5, code, and metrics.
+
+### Files / Components
+
+- `scripts/run_robust_evaluation.py` (new, uncommitted): per-model loop
+  over 15 conditions via existing `evaluate_model` (batch 32, CUDA,
+  no_grad) + `ExperimentConfig`/`ExperimentResult.from_metrics`; asserts
+  n=1,186, 600/586, cross-model y_true identity, finite [0,1] probs,
+  baseline-clean-within-1e-4, param and file immutability.
+- Outputs (new, uncommitted): `results/metrics/robust_evaluation_… .csv`
+  (30 rows), `results/predictions/…` (35,580 rows with example_id/model/
+  ai_prob), `results/confusion_matrices/…` (30 rows),
+  `results/metrics/baseline_vs_robust_….csv` (15 rows with pp deltas),
+  30 per-model-condition JSON logs. Baseline experiment files untouched.
+
+### Implementation Details
+
+ACTUAL RESULTS — robust AI-recall gain (pp) vs baseline, per condition:
+clean +1.02; JPEG Q90 +6.14, Q70 +15.02, Q50 +21.33, Q30 +32.08;
+resize 0.75 −0.68, 0.50 −0.85, 0.25 +4.27; recomp Q90 +6.66, Q70 +15.02,
+Q50 +21.67, Q30 +32.25; C1 +35.67, C2 +4.95, C3 +36.69.
+Robust clean cost: accuracy −1.77pp (0.9073→0.8895), precision −3.82pp,
+AUC −0.58pp; robust clean AI recall +1.02pp (FNR 0.0904→0.0802).
+Robust worst condition: resize_025 acc 0.6492 (baseline 0.5371) —
+improved but still the weakest absolute score; unseen-by-training
+conditions (0.25, recomp Q50/Q30, C3) all improved substantially.
+
+Observation (not causal proof): transformation-aware training converts
+the JPEG-family AI-recall collapse into a largely preserved recall at a
+small clean-accuracy cost; resize_025 remains hard for both models. The
+Real-JPEG / AI-PNG format confound (Section 9) still tempers any claim
+that compression alone caused the baseline degradation.
+
+### Verification
+
+- 15 conditions × 2 models = 30 rows; every pair n=1,186, 600/586.
+- y_true identical across models and conditions; probs finite in [0,1].
+- Baseline clean reproduces reference within 1e-4; params bit-identical
+  for both models; source images/checkpoints unmodified (size+mtime).
+- Two script bugs fixed before the green save (comparison/print dicts
+  used long metric names instead of the `ai_f1`/`ai_fnr`/`fpr` row keys;
+  eval outputs themselves were unaffected). One redundant re-run timed
+  out on machine slowness; on-disk artifacts are from the fully validated
+  run (identical deterministic code path).
+- `git status`: only new Experiment 6 files + script + log edit; all
+  prior results/src/checkpoints untouched; nothing committed.
+
+### Problems / Solutions
+
+- Key-name mismatches (above): fixed, outputs verified row-counted
+  (30/15/35,580/30 JSONs). No data/model issues.
+
+### Status
+
+COMPLETED (evaluation measured and saved; uncommitted; error-analysis /
+Streamlit NOT started per task scope).
+
+---
+
+## Development Step: Experiment 7 — Visualization and Analysis Summary
+
+### What We Did
+
+Added and ran `scripts/plot_robustness_results.py` on `ansh-branch`
+(Person 2 scope): validates the saved Experiment 6 CSVs, renders 7
+report figures into `results/graphs/`, and generates
+`results/metrics/robustness_analysis_summary.md` computed from the CSVs.
+No inference, no training, no test access, no `src/` changes.
+
+### Why
+
+Decision-ready figures and a report summary derived reproducibly from the
+validated numbers, with all deltas computed (percentage points) rather
+than hardcoded.
+
+### Files / Components
+
+- `scripts/plot_robustness_results.py` (new, uncommitted): schema/row/
+  finiteness/n=1186/CM-sum/delta-consistency validation (exit 1 on any
+  failure); grouped bars (AI recall, accuracy, AI FNR across 15
+  conditions); AI recall vs JPEG quality and vs resize scale with clean
+  references; 2×4 confusion-matrix heatmaps (clean, JPEG Q30, resize
+  0.25, C3) per model; all at 150 dpi with labels/legends.
+- `results/graphs/`: 7 PNGs (ai_recall/accuracy/ai_fnr_all_conditions,
+  ai_recall_vs_jpeg_quality, ai_recall_vs_resize_scale,
+  confusion_matrices_key_conditions_{baseline,robust}).
+- `results/metrics/robustness_analysis_summary.md`: clean trade-off
+  (−1.77pp acc, +1.02pp AI recall), top-5 AI-recall gains (C3 +36.69 …
+  recomp Q50 +21.67), regressions (resize_050 −0.85, resize_075 −0.68),
+  unseen-condition results, and limits incl. the Real-JPEG/AI-PNG
+  format confound.
+
+### Implementation Details
+
+Key findings (computed, not claimed): robust training helps everywhere
+except negligible resize_075/050 AI-recall dips; unseen conditions all
+improve; resize_025 stays weakest absolute for both models.
+
+### Verification
+
+- Script output: source validation OK; all 8 paths exist and non-empty
+  (44–61 KB PNGs, 1.6 KB md). Command:
+  `conda run -n ml_clean python scripts/plot_robustness_results.py`.
+- Two script bugs fixed before the green run (comparison-column filter
+  matching `delta_pp_*`; DataFrame-vs-Series `.items()` in regressions
+  loop; tight_layout warning on colorbar figures). Source CSVs untouched.
+
+### Problems / Solutions
+
+- None in data; script bugs above fixed and re-run green.
+
+### Status
+
+COMPLETED (figures + summary generated; uncommitted).
+
+---
+
+## Development Step: Experiment 8 — Dataset Format and Metadata Bias Audit
+
+### What We Did
+
+Added and ran `scripts/audit_dataset_bias.py` on `ansh-branch`
+(Person 2 scope): read-only probe of all 7,986 manifest images for
+extension, decoded format, geometry, color mode, and JPEG quantization
+presence, per split × class, plus a labeled DIAGNOSTIC metadata
+classifier (logistic regression on 7 trivial features; fit on train,
+C selected on val, test reported once without tuning). No data, split,
+model, or result modified.
+
+### Why
+
+The Real-JPEG / AI-PNG confound was asserted but never quantified; every
+robustness claim needs measured shortcut evidence behind it.
+
+### Files / Components
+
+- `scripts/audit_dataset_bias.py` (new, uncommitted).
+- `results/metrics/dataset_bias_audit.csv` (6 split×class rows).
+- `results/experiment_logs/dataset_bias_audit.json` (full tables, seed 42).
+
+### Implementation Details
+
+ACTUAL FINDINGS (descriptive only, not causal):
+
+- Format separation is PERFECT in all splits: 100% Real = `.jpeg`/JPEG
+  (4,000, all carry quantization tables), 100% AI = `.png`/PNG (3,986,
+  zero quantization tables). Extension or decoded format alone is a
+  perfect label predictor.
+- Mode separators: RGBA occurs only in AI (~14% of AI: 400/2800 train);
+  grayscale L only in Real (~1.4%). Geometry: AI images are always
+  square (W==H, 128–1024px generator canvases); Real are variable
+  rectangles (e.g. train mean ~470×405, range 63–3872px).
+- Diagnostic classifier: val accuracy 1.0000 (all C), held-out test
+  1.0000 — trivial metadata separates the classes perfectly.
+- Zero unreadable files (7,986/7,986 probed).
+
+What this does NOT show: that any model uses these shortcuts, or that
+compression effects are reducible to format. It bounds interpretation:
+clean accuracy and JPEG-family degradations are entangled with a perfect
+format signal, and the report must say so.
+
+### Verification
+
+- Command: `conda run -n ml_clean python scripts/audit_dataset_bias.py`
+  (EXIT True). Manifest 7,986 rows; outputs exist and non-empty.
+- `git status`: only the script + 2 outputs (+ this log edit); frozen
+  split, checkpoints, prior results untouched; nothing committed.
+
+### Problems / Solutions
+
+- None in data. Geometry/format gaps are findings, not errors.
+
+### Status
+
+COMPLETED (audit measured and saved; uncommitted).
+
+---
+
+## Development Step: Experiment 9 — Format-Normalization Diagnostic
+
+### What We Did
+
+Added and ran `scripts/run_format_diagnostic.py` on `ansh-branch`
+(Person 2 scope): frozen baseline + robust EfficientNet-B0 checkpoints on
+the same 1,186-image test set under clean, lossless-PNG re-encode, and
+JPEG Q95 with 4:4:4 subsampling (script-local BytesIO helpers; decoded-RGB
+copies re-encoded BEFORE unchanged 224x224 preprocessing). Eval only,
+threshold 0.5, CUDA, no tuning, no modifications to data or checkpoints.
+
+### Why
+
+Experiment 8 proved perfect Real-JPEG / AI-PNG separation in metadata; this
+diagnostic measures checkpoint response when inputs are normalized to a
+common container at (near-)lossless fidelity.
+
+### Files / Components
+
+- `scripts/run_format_diagnostic.py` (new, uncommitted).
+- `results/metrics/format_diagnostic_efficientnet_b0.csv` (6 rows),
+  `results/metrics/baseline_vs_robust_format_efficientnet_b0.csv` (3 rows),
+  `results/predictions/…` (7,116 rows), `results/confusion_matrices/…`
+  (6 rows), 6 per-model-condition JSON logs.
+
+### Implementation Details
+
+ACTUAL RESULTS (n=1,186 each; descriptive only):
+
+| Model | Condition | Acc | AI Rec | AI FNR | AUC | CM |
+|---|---|---|---|---|---|---|
+| baseline | clean | 0.9073 | 0.9096 | 0.0904 | 0.9649 | [[543,57],[53,533]] |
+| baseline | png | 0.9073 | 0.9096 | 0.0904 | 0.9649 | identical |
+| baseline | jpeg_q95 | 0.8988 | 0.8857 | 0.1143 | 0.9601 | [[547,53],[67,519]] |
+| robust | clean | 0.8895 | 0.9198 | 0.0802 | 0.9591 | [[516,84],[47,539]] |
+| robust | png | 0.8895 | 0.9198 | 0.0802 | 0.9591 | identical |
+| robust | jpeg_q95 | 0.8862 | 0.9096 | 0.0904 | 0.9560 | [[518,82],[53,533]] |
+
+Key measured finding: lossless PNG re-encoding changes NOTHING
+(bit-identical predictions — expected, since the pipeline already decodes
+to RGB; the container alone carries no signal to these classifiers).
+JPEG Q95 costs little (baseline AI recall −2.39pp, robust −0.90pp).
+This does NOT identify shortcut use and does NOT normalize away bias:
+heavy-compression degradations (Exp 1/3) reflect lossy pixel damage, not
+container identity — a hypothesis consistent with, but not proven by,
+this diagnostic.
+
+### Verification
+
+- Command: `conda run -n ml_clean python scripts/run_format_diagnostic.py`
+  (EXIT True). 6 rows / 3 comparison rows / 7,116 predictions / 6 logs;
+  n=1,186, 600/586, y_true identical, finite probs, baseline clean within
+  1e-4, params bit-identical, files untouched, all-CUDA.
+- `git status`: only new Experiment 9 files + script (+ this log edit);
+  prior outputs/src/checkpoints untouched; nothing committed.
+
+### Problems / Solutions
+
+- None.
+
+### Status
+
+COMPLETED (diagnostic measured and saved; uncommitted).
+
+---
+
+## Development Step: Experiment 10 — Streamlit Research Demo
+
+### What We Did
+
+Implemented `app/app.py` on `ansh-branch` (Person 2 scope): Streamlit demo
+loading both frozen EfficientNet-B0 checkpoints (cached per session),
+upload + RGB decode, optional JPEG/resize input demos via existing
+helpers, side-by-side predicted class + raw AI score, research disclaimer.
+Also updated the README Streamlit section with run instructions. No
+checkpoints, data, or results modified.
+
+### Why
+
+Demonstration layer for the finished baseline-vs-robust comparison, per
+AGENTS.md application requirements.
+
+### Files / Components
+
+- `app/app.py` (rewrote scaffold): `load_checkpoint` + `get_transform`
+  reuse (same RGB/224/ImageNet path, label map asserted, `[1,2]` logits
+  asserted); `st.cache_resource` session-once loading with actionable
+  missing-checkpoint errors; JPEG Q90–Q30 / resize 0.75–0.25 demos with
+  input-only warning; eval-mode no-grad inference on CUDA-if-available;
+  invalid-file and inference-failure handling; disclaimer (predictions ≠
+  proof, format bias known, unseen sources unestablished).
+- `README.md`: Streamlit section only (run command + checkpoint note).
+
+### Implementation Details
+
+Design: predicted class (threshold 0.5) displayed separately from the raw
+AI score, explicitly labeled NOT calibrated confidence.
+
+### Verification
+
+- Headless checks (temp script, repo kept clean; Streamlit 1.54.0):
+  import OK; both checkpoints load on CUDA in eval mode; RGB preprocess
+  yields (3,224,224); baseline pred=1 score 0.9327 / robust pred=1 score
+  0.8278 on a synthetic image (smoke values, not results); resize+jpeg
+  demo path OK; garbage upload raises UnidentifiedImageError (caught).
+  ALL APP CHECKS PASSED.
+- `streamlit run app/app.py --server.headless true` boots; health
+  endpoint returns ok. Full browser interaction NOT tested (headless
+  environment) — stated limitation.
+- `git status` scope: app + README (+ this log edit); checkpoints/data/
+  results untouched; nothing committed.
+
+### Problems / Solutions
+
+- None in code. Bare-mode ScriptRunContext warning in headless test is
+  expected Streamlit behavior, not a defect.
+
+### Status
+
+COMPLETED (demo implemented and smoke-tested; uncommitted).
+
+---
+
+## Development Step: Dashboard Refactor — AI Image Robustness Lab (replaces prediction demo)
+
+### What We Did
+
+Permanently replaced the Experiment 10 image-prediction demo with a
+read-only research dashboard on `ansh-branch` (Person 2 scope): rewrote
+`app/app.py` as AI Image Robustness Lab (Overview, Transformation
+Experiments, Baseline vs Robust, Dataset Bias & Format, Methodology &
+Limitations tabs); updated the README Streamlit section (purpose, run,
+artifacts, deployment, limits). No other files touched.
+
+### Why
+
+Team decision: the public artifact communicates completed results; it must
+not classify arbitrary uploads or imply reliable authenticity detection.
+
+### Files / Components
+
+- `app/app.py` (rewritten): zero torch/checkpoint/upload/inference code
+  (verified by search — sole `.pth` mention is a prose path); cached
+  read-only loads of the 30-row eval CSV, comparison CSVs (incl. format),
+  bias audit CSV/JSON, summary md, split metadata, manifest generators,
+  robust-training config/history; schema + delta-consistency validation
+  with visitor-friendly errors; grouped bars, sweeps, pp-delta tables,
+  side-by-side comparison with direction-aware notes, per-model CM tables,
+  bias/format/methodology sections with observation/interpretation/unproven
+  separation.
+- `README.md`: Streamlit section rewritten for the dashboard.
+- `requirements.txt`: unchanged (torch retained for research scripts;
+  streamlit/matplotlib/pandas already listed — no env rewrite).
+
+### Implementation Details
+
+Preflight found: app entry `app/app.py` (prediction demo); all result
+artifacts present (only prior uncommitted changes were README/app/dev-log
+from Experiment 10 — preserved and built upon); no deployment config
+exists (Streamlit Community Cloud assumed; entry `app/app.py`); total
+predictions CSVs ~7 MB stay out of the dashboard's load path (metrics +
+small JSONs only); checkpoints/raw images never needed by the app.
+
+### Verification
+
+- Headless `load_all()`: 30/15/6/6 rows, no torch imported — OK.
+- Full `AppTest.from_file(...).run(timeout=120)`: 5 tabs, 4 metric cards,
+  5 dataframes, zero exceptions, zero error elements — OK.
+- `streamlit run --server.headless` boots; health endpoint ok. Browser
+  interaction and live deployment NOT tested — stated limitations.
+- `git status` scope: app + README (+ this log edit); all research
+  artifacts, checkpoints, splits untouched; nothing committed.
+
+### Problems / Solutions
+
+- None in dashboard code (written with the corrected validation patterns
+  from the start). AppTest default 3 s timeout was environmental — reran
+  with timeout=120 and passed. No source-data inconsistencies found.
+
+### Status
+
+COMPLETED (dashboard implemented and tested headless; uncommitted; not
+deployed).

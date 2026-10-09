@@ -1,0 +1,58 @@
+{
+  "config": {
+    "model": "efficientnet_b0",
+    "init_checkpoint": "models\\baseline\\efficientnet_b0_best.pth",
+    "optimizer": "adam",
+    "lr": 0.0001,
+    "weight_decay": 0.0001,
+    "epochs": 10,
+    "batch_size": 16,
+    "seed": 42,
+    "device": "cuda",
+    "policy": {
+      "clean": 0.4,
+      "jpeg": {
+        "p": 0.2,
+        "qualities": [
+          90,
+          70,
+          50,
+          30
+        ]
+      },
+      "resize": {
+        "p": 0.15,
+        "scales": [
+          0.75,
+          0.5
+        ]
+      },
+      "recompression": {
+        "p": 0.15,
+        "qualities": [
+          90,
+          70
+        ],
+        "passes": 2
+      },
+      "combined": {
+        "p": 0.1,
+        "choices": [
+          "C1",
+          "C2"
+        ],
+        "C1": "resize(0.5)->jpeg(50)",
+        "C2": "jpeg(50)->resize(0.5)"
+      },
+      "unseen_reserved": [
+        "resize_0.25",
+        "recomp_q50",
+        "recomp_q30",
+        "C3"
+      ]
+    },
+    "train_n": 5600,
+    "val_n": 1200
+  },
+  "selection_rule": "highest clean val accuracy; tie -> lower clean val loss, then earlier"
+}
