@@ -1,0 +1,49 @@
+{
+  "run_id": "20261009T164010Z",
+  "config": {
+    "model_name": "efficientnet_b0_robust",
+    "experiment_name": "robust_evaluation_jpeg_q30_robust",
+    "split": "test",
+    "transformation": "jpeg",
+    "transformation_params": {
+      "quality": 30
+    },
+    "condition": "transformed",
+    "training_condition": "robust",
+    "seed": 42
+  },
+  "result": {
+    "experiment_name": "robust_evaluation_jpeg_q30_robust",
+    "model_name": "efficientnet_b0_robust",
+    "transformation": "jpeg",
+    "transformation_params": {
+      "quality": 30
+    },
+    "condition": "transformed",
+    "split": "test",
+    "training_condition": "robust",
+    "accuracy": 0.8659359190556493,
+    "precision": 0.8564273789649416,
+    "recall": 0.8754266211604096,
+    "f1": 0.8658227848101265,
+    "ai_recall": 0.8754266211604096,
+    "ai_false_negative_rate": 0.12457337883959041,
+    "roc_auc": 0.9369539249146758,
+    "confusion_matrix": [
+      [
+        514,
+        86
+      ],
+      [
+        73,
+        513
+      ]
+    ],
+    "n_samples": 1186
+  },
+  "checkpoint": "models\\robust\\efficientnet_b0_robust_best.pth",
+  "threshold": 0.5,
+  "device": "cuda",
+  "batch_size": 32,
+  "seed": 42
+}

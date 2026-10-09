@@ -1724,3 +1724,78 @@ COMPLETED (implementation + checks; uncommitted; training NOT started;
 test evaluation NOT run).
 
 Launch later with: `conda run -n ml_clean python scripts/train_robust.py`
+
+---
+
+## Development Step: Experiment 6 — Baseline vs Robust Evaluation (EfficientNet-B0)
+
+### What We Did
+
+Implemented and ran the head-to-head evaluation on `ansh-branch`
+(Person 2 scope): new `scripts/run_robust_evaluation.py` evaluating the
+frozen baseline checkpoint AND the epoch-8 robust checkpoint
+(`models/robust/efficientnet_b0_robust_best.pth`, trained 10 epochs per
+the committed history: best clean-val 0.9008) on the same 1,186-image
+test set under all 15 protocol conditions (clean + JPEG x4 + resize x3 +
+recompression x4 + combined x3). Eval only; no retraining, no tuning.
+
+### Why
+
+The primary research question: does transformation-aware training improve
+robustness while preserving clean performance? Both models share test
+images, order, labels, preprocessing, threshold 0.5, code, and metrics.
+
+### Files / Components
+
+- `scripts/run_robust_evaluation.py` (new, uncommitted): per-model loop
+  over 15 conditions via existing `evaluate_model` (batch 32, CUDA,
+  no_grad) + `ExperimentConfig`/`ExperimentResult.from_metrics`; asserts
+  n=1,186, 600/586, cross-model y_true identity, finite [0,1] probs,
+  baseline-clean-within-1e-4, param and file immutability.
+- Outputs (new, uncommitted): `results/metrics/robust_evaluation_… .csv`
+  (30 rows), `results/predictions/…` (35,580 rows with example_id/model/
+  ai_prob), `results/confusion_matrices/…` (30 rows),
+  `results/metrics/baseline_vs_robust_….csv` (15 rows with pp deltas),
+  30 per-model-condition JSON logs. Baseline experiment files untouched.
+
+### Implementation Details
+
+ACTUAL RESULTS — robust AI-recall gain (pp) vs baseline, per condition:
+clean +1.02; JPEG Q90 +6.14, Q70 +15.02, Q50 +21.33, Q30 +32.08;
+resize 0.75 −0.68, 0.50 −0.85, 0.25 +4.27; recomp Q90 +6.66, Q70 +15.02,
+Q50 +21.67, Q30 +32.25; C1 +35.67, C2 +4.95, C3 +36.69.
+Robust clean cost: accuracy −1.77pp (0.9073→0.8895), precision −3.82pp,
+AUC −0.58pp; robust clean AI recall +1.02pp (FNR 0.0904→0.0802).
+Robust worst condition: resize_025 acc 0.6492 (baseline 0.5371) —
+improved but still the weakest absolute score; unseen-by-training
+conditions (0.25, recomp Q50/Q30, C3) all improved substantially.
+
+Observation (not causal proof): transformation-aware training converts
+the JPEG-family AI-recall collapse into a largely preserved recall at a
+small clean-accuracy cost; resize_025 remains hard for both models. The
+Real-JPEG / AI-PNG format confound (Section 9) still tempers any claim
+that compression alone caused the baseline degradation.
+
+### Verification
+
+- 15 conditions × 2 models = 30 rows; every pair n=1,186, 600/586.
+- y_true identical across models and conditions; probs finite in [0,1].
+- Baseline clean reproduces reference within 1e-4; params bit-identical
+  for both models; source images/checkpoints unmodified (size+mtime).
+- Two script bugs fixed before the green save (comparison/print dicts
+  used long metric names instead of the `ai_f1`/`ai_fnr`/`fpr` row keys;
+  eval outputs themselves were unaffected). One redundant re-run timed
+  out on machine slowness; on-disk artifacts are from the fully validated
+  run (identical deterministic code path).
+- `git status`: only new Experiment 6 files + script + log edit; all
+  prior results/src/checkpoints untouched; nothing committed.
+
+### Problems / Solutions
+
+- Key-name mismatches (above): fixed, outputs verified row-counted
+  (30/15/35,580/30 JSONs). No data/model issues.
+
+### Status
+
+COMPLETED (evaluation measured and saved; uncommitted; error-analysis /
+Streamlit NOT started per task scope).
