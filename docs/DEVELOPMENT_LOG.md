@@ -1857,3 +1857,64 @@ improve; resize_025 stays weakest absolute for both models.
 ### Status
 
 COMPLETED (figures + summary generated; uncommitted).
+
+---
+
+## Development Step: Experiment 8 — Dataset Format and Metadata Bias Audit
+
+### What We Did
+
+Added and ran `scripts/audit_dataset_bias.py` on `ansh-branch`
+(Person 2 scope): read-only probe of all 7,986 manifest images for
+extension, decoded format, geometry, color mode, and JPEG quantization
+presence, per split × class, plus a labeled DIAGNOSTIC metadata
+classifier (logistic regression on 7 trivial features; fit on train,
+C selected on val, test reported once without tuning). No data, split,
+model, or result modified.
+
+### Why
+
+The Real-JPEG / AI-PNG confound was asserted but never quantified; every
+robustness claim needs measured shortcut evidence behind it.
+
+### Files / Components
+
+- `scripts/audit_dataset_bias.py` (new, uncommitted).
+- `results/metrics/dataset_bias_audit.csv` (6 split×class rows).
+- `results/experiment_logs/dataset_bias_audit.json` (full tables, seed 42).
+
+### Implementation Details
+
+ACTUAL FINDINGS (descriptive only, not causal):
+
+- Format separation is PERFECT in all splits: 100% Real = `.jpeg`/JPEG
+  (4,000, all carry quantization tables), 100% AI = `.png`/PNG (3,986,
+  zero quantization tables). Extension or decoded format alone is a
+  perfect label predictor.
+- Mode separators: RGBA occurs only in AI (~14% of AI: 400/2800 train);
+  grayscale L only in Real (~1.4%). Geometry: AI images are always
+  square (W==H, 128–1024px generator canvases); Real are variable
+  rectangles (e.g. train mean ~470×405, range 63–3872px).
+- Diagnostic classifier: val accuracy 1.0000 (all C), held-out test
+  1.0000 — trivial metadata separates the classes perfectly.
+- Zero unreadable files (7,986/7,986 probed).
+
+What this does NOT show: that any model uses these shortcuts, or that
+compression effects are reducible to format. It bounds interpretation:
+clean accuracy and JPEG-family degradations are entangled with a perfect
+format signal, and the report must say so.
+
+### Verification
+
+- Command: `conda run -n ml_clean python scripts/audit_dataset_bias.py`
+  (EXIT True). Manifest 7,986 rows; outputs exist and non-empty.
+- `git status`: only the script + 2 outputs (+ this log edit); frozen
+  split, checkpoints, prior results untouched; nothing committed.
+
+### Problems / Solutions
+
+- None in data. Geometry/format gaps are findings, not errors.
+
+### Status
+
+COMPLETED (audit measured and saved; uncommitted).
