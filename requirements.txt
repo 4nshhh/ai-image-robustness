@@ -1,11 +1,14 @@
+# Tested working set: ml_clean env (torch 2.13.0+cu126, CUDA 12.6, Python 3.11/3.12).
+# torch/torchvision are intentionally UNPINNED: CUDA wheels come from the
+# PyTorch index and pinning a cuXXX build would break CPU and Streamlit
+# Community Cloud installs. Training/eval scripts require a CUDA build;
+# the read-only dashboard (app/app.py) needs no torch at all.
 torch
 torchvision
-numpy
-pandas
-Pillow
-opencv-python
-scikit-learn
-matplotlib
-tqdm
-streamlit
+numpy>=2.2.6
+pandas>=2.3.3
+Pillow>=12.3.0
+scikit-learn>=1.7.2
+matplotlib>=3.10.8
+streamlit>=1.54.0
 jupyter

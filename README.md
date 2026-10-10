@@ -57,7 +57,7 @@ No dashboard screenshot is committed yet; capture the Overview tab before submis
 ├── docs/                      # EXPERIMENT_PROTOCOL, DEVELOPMENT_LOG, FINAL_REPORT_SOURCE,
 │                              # PRESENTATION_SOURCE, RESULTS_REFERENCE, REFERENCES, …
 ├── models/baseline|robust/    # histories + configs committed; *.pth weights gitignored
-├── notebooks/01–04            # analysis/training/experiment/robust-training notebooks
+├── notebooks/02_baseline_training.ipynb  # training walkthrough (analysis/robust-training work lives in scripts/)
 ├── results/metrics|graphs|confusion_matrices|predictions|experiment_logs/
 ├── scripts/                   # verify_baseline, run_*_robustness, train_robust, plotting, audit, app
 ├── src/                       # dataset, preprocessing, model, train, transformations,

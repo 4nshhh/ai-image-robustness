@@ -2355,3 +2355,63 @@ and no-generalization statements unchanged.
 ### Status
 
 COMPLETED (consolidation done; uncommitted).
+
+---
+
+## Development Step: Audit-Finding Fixes — AGENTS Docs, Scaffold Notebooks, Dependencies
+
+### What We Did
+
+Resolved the approved audit findings on `main`, no broad refactor:
+(1) `AGENTS.md` docs subtree now lists the six maintained files and §74
+points the chronological record at `docs/DEVELOPMENT_LOG.md` (numbers in
+`docs/RESULTS_REFERENCE.md`); notebooks subtree notes 01/03/04 removal.
+(2) Deleted the three single-markdown-cell scaffold notebooks after
+verifying no code/results/references; fixed the one dangling pointer in
+notebook 02 (now routes to `scripts/run_*_robustness.py`); updated the
+README structure line. (3) `requirements.txt`: removed `opencv-python`
+and `tqdm` (zero imports repo-wide, verified), added measured lower
+bounds (numpy 2.2.6, pandas 2.3.3, Pillow 12.3.0, sklearn 1.7.2,
+matplotlib 3.10.8, streamlit 1.54.0); torch/torchvision deliberately
+unpinned (CUDA-wheel/Cloud caution), env-tested set recorded in a header
+comment.
+
+### Why
+
+Binding rules must not mandate deleted files; scaffold notebooks
+contradicted completed work; unpinned/unused deps hurt reproducibility.
+
+### Files / Components
+
+- `AGENTS.md` (docs listing, §74, notebooks listing).
+- Deleted: `notebooks/01_dataset_analysis.ipynb`,
+  `03_transformation_experiments.ipynb`, `04_robust_training.ipynb`.
+- `notebooks/02_baseline_training.ipynb` (one pointer line),
+  `README.md` (one structure line), `requirements.txt`.
+
+### Implementation Details
+
+No methodology weakened; notebook content rules in AGENTS.md left as
+conventions (02 still follows them). No `src/`, data, checkpoint,
+result, plot, dashboard, or protocol-content changes.
+
+### Verification
+
+- `git diff --check` clean; status shows only the 7 intended paths.
+- Repo-wide search: no live references to deleted notebooks/docs outside
+  AGENTS.md conventions, this log's history, and one intentional
+  historical note in RESULTS_REFERENCE.
+- `py_compile` over src/scripts/tests/app + notebook-02 JSON parse: OK.
+- Dashboard AppTest default page: 0 exceptions / 0 errors.
+- 40-check ML suite NOT re-run (src/tests untouched since its in-audit
+  40/40 pass); installed versions measured from `ml_clean` (torch
+  2.13.0+cu126, CUDA available).
+
+### Problems / Solutions
+
+- None. Remaining risk: fresh-install resolution untested (no new env
+  created); Cloud GPU absence is fine (dashboard needs no torch).
+
+### Status
+
+COMPLETED (fixes applied and validated; uncommitted).

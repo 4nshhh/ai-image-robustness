@@ -226,10 +226,9 @@ ai-image-robustness/
 │   └── metadata/
 │
 ├── notebooks/
-│   ├── 01_dataset_analysis.ipynb
-│   ├── 02_baseline_training.ipynb
-│   ├── 03_transformation_experiments.ipynb
-│   └── 04_robust_training.ipynb
+│   └── 02_baseline_training.ipynb
+│       (analysis/robust-training work lives in scripts/; placeholder
+│       notebooks 01/03/04 were removed — see development log)
 │
 ├── src/
 │   ├── __init__.py
@@ -256,9 +255,12 @@ ai-image-robustness/
 │   └── app.py
 │
 └── docs/
-    ├── methodology.md
-    ├── experiment_log.md
-    └── results_summary.md
+    ├── DEVELOPMENT_LOG.md
+    ├── EXPERIMENT_PROTOCOL.md
+    ├── FINAL_REPORT_SOURCE.md
+    ├── PRESENTATION_SOURCE.md
+    ├── REFERENCES.md
+    └── RESULTS_REFERENCE.md
 
 Do not create unnecessary directories or duplicate functionality.
 
@@ -1825,11 +1827,17 @@ At minimum record:
 
 ## 74. Experiment Log
 
-Maintain:
+Maintain the chronological development record:
 
-docs/experiment_log.md
+docs/DEVELOPMENT_LOG.md
 
-Example:
+Per-experiment numbers live in the validated results reference:
+
+docs/RESULTS_REFERENCE.md
+
+with run-level detail under `results/experiment_logs/`.
+
+Example entry (adapt field names to the actual completed experiment):
 
 ## Experiment: baseline_resnet50_clean
 
