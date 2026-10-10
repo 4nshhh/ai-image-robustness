@@ -2104,3 +2104,142 @@ small JSONs only); checkpoints/raw images never needed by the app.
 
 COMPLETED (dashboard implemented and tested headless; uncommitted; not
 deployed).
+
+---
+
+## Development Step: Dashboard Redesign — Publication-Quality Research Interface
+
+### What We Did
+
+Redesigned `app/app.py` on `ansh-branch` (Person 2 scope) from the crowded
+tab prototype into a spacious scientific dashboard; added
+`.streamlit/config.toml` (light theme, teal accent). No research code,
+results, or protocols touched.
+
+### Why
+
+Faculty/reviewer-facing polish: readable charts, compact filters, no
+repository internals in the UI, research terminology throughout.
+
+### Files / Components
+
+- `app/app.py` (rewritten presentation layer; data loading/validation
+  logic preserved): sidebar radio navigation (Overview, Transformation
+  Robustness, Model Comparison, Dataset Bias & Format, Methodology &
+  Limitations); human-readable labels everywhere (`AI Detection Recall`,
+  `25% Resize`, `Resize → JPEG → JPEG`, model names — verified by search,
+  raw identifiers remain code-only); single-select filters (metric /
+  family / model / condition) with immediate useful defaults; large
+  matplotlib charts (line sweeps for ordered JPEG/resize/recompression
+  parameters, grouped or single bars otherwise, horizontal bars on the
+  comparison page — never stacked); percentages in UI with pp deltas;
+  direction-aware metric notes; CM tables labeled Actual/Predicted;
+  bias page split into observed/interpretation/unproven; methodology in
+  expandable sections.
+- `.streamlit/config.toml` (new): light theme + accent color.
+- `README.md`, `requirements.txt`: unchanged (dashboard description still
+  accurate; no new dependencies).
+
+### Implementation Details
+
+Decisions: sidebar over tabs (reliable, obvious active state, small-screen
+friendly); matplotlib over native charts (label/legend/size control);
+line charts only for genuinely ordered numeric axes; combined-family and
+all-condition views use grouped bars; single-model views show one series
+without empty comparisons.
+
+### Verification
+
+- `git diff --check`: clean. Scope: only `app/app.py` + new theme file.
+- Headless `load_all()`: 30/15/6/6 rows, no torch — OK (unchanged logic).
+- `AppTest`: all 5 sidebar sections render, zero exceptions/errors;
+  Transformation filters (metric/family/model) and comparison condition
+  filter update without errors — OK. (One harness quirk: AppTest widget
+  state with `format_func` needs a fresh session per interaction; app
+  code unaffected.)
+- `use_container_width` deprecation fixed (`width="stretch"`).
+- Headless server boot, health ok. Browser interaction and live
+  deployment NOT tested — stated limitations.
+- No torch/checkpoint/upload/inference code in the app (search-verified);
+  saved artifacts byte-identical (only app + theme + this log edit
+  modified); nothing committed.
+
+### Problems / Solutions
+
+- None in app code. Multi-line `python -c` breaks `conda run` on this
+  machine — temp-file scripts used for harness tests instead.
+
+### Status
+
+COMPLETED (redesign implemented and validated headless; uncommitted; not
+deployed).
+
+---
+
+## Development Step: Dashboard Polish — Navigation Icons and Chart Readability
+
+### What We Did
+
+Focused polish of `app/app.py` on `ansh-branch` (Person 2 scope):
+native Material icons on all five sidebar items (radio options starting
+with `:material/home|tune|balance|database|menu_book:`, extracted natively
+by Streamlit's button-group widget) and matching icons on all five page
+headings via a shared `section_heading()` helper; categorical charts
+converted to horizontal grouped bars with dynamic height
+(`bar_height(n)`), short chart labels, and readable y-axis rows; line
+sweeps kept for ordered JPEG/resize/recompression axes. Added
+`.streamlit/config.toml` in the prior step (already present). No layout,
+theme, filters, terminology, data logic, or results changed.
+
+### Why
+
+Icons give each section a scannable visual anchor; horizontal bars fix the
+overlapping x-axis labels that made the all-conditions chart unreadable.
+
+### Files / Components
+
+- `app/app.py` only (+ this log edit): `SECTIONS`/`NAV_OPTIONS`/
+  `NAV_TO_KEY` tables, `CHART_LABEL` short forms (full descriptions stay
+  in tables/captions), horizontal `grouped_bars` + `bar_height`,
+  single-model horizontal bars, comparison page short labels.
+- `.streamlit/config.toml`: unchanged from prior step.
+
+### Implementation Details
+
+Icon names verified against the installed Streamlit Material-icon set
+before use (all five present; nearby alternatives like
+`sliders_horizontal`/`scan_search` absent and avoided). Line charts touch
+only genuinely ordered numeric axes; combined/all-condition views use
+grouped (never stacked) bars; single-model views plot one series.
+Sweeps keep evaluation order (JPEG 90→30, scale 0.75→0.25).
+
+### Verification
+
+- `git diff --check`: clean. Scope: `app/app.py` + log edit only.
+- AppTest: all 5 icon-labeled sections render, zero exceptions/errors;
+  7 filter/chart paths (all-conditions, JPEG/Resize/Recompression sweeps,
+  single-model, combined, clean, comparison condition) update cleanly.
+- Headless server boot, health ok. Browser icon rendering and live
+  deployment NOT tested — stated limitations (shortcodes are validated
+  names; unsupported names would show literal text, so names were
+  pre-verified).
+- Research artifacts byte-identical; no torch/training/inference code;
+  nothing committed.
+
+### Problems / Solutions
+
+- Three batch heading edits duplicated `def` lines (syntax errors); all
+  found by `ast.parse` and repaired, 5 page functions confirmed.
+- Follow-up fix (same session): robust clean-accuracy KPIs on Overview and
+  Model Comparison formatted the raw rate without ×100 (`0.89%` instead of
+  `88.95%`); baseline cards were correct. Fixed both to `* 100:.2f}%`,
+  audited all other displays (tables use `:.2%`, deltas use pp — all
+  correct, none double-scaled), and verified rendered KPIs read
+  `90.73%` / `88.95%` via AppTest.
+- AppTest `selectbox.set_value` needs internal option values (not indices)
+  with `format_func` widgets — harness quirk, app unaffected.
+
+### Status
+
+COMPLETED (polish implemented and validated headless; uncommitted; not
+deployed).
