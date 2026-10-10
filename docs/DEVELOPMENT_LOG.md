@@ -2243,3 +2243,60 @@ Sweeps keep evaluation order (JPEG 90→30, scale 0.75→0.25).
 
 COMPLETED (polish implemented and validated headless; uncommitted; not
 deployed).
+
+---
+
+## Development Step: Documentation Overhaul — README, Report/PPT Sources, Results Reference
+
+### What We Did
+
+Documentation-only work on `main` (ansh-branch fully merged via PR #3, tree
+clean, so documentation proceeded on the merged history): rewrote
+`README.md` (15 sections: RQ, findings table, dashboard, structure, setup,
+dataset, models, transforms, results links, reproducibility, limitations,
+references, team roles); created `docs/FINAL_REPORT_SOURCE.md` (15-section
+academic report source with observation/interpretation/hypothesis labels),
+`docs/PRESENTATION_SOURCE.md` (11-slide plan with messages, visuals,
+speaker notes, timings), `docs/RESULTS_REFERENCE.md` (condition/model/
+source table for every metric + reconciliation note), `docs/REFERENCES.md`
+(3 project-cited works, verification flags). No code, data, checkpoints,
+results, or configs touched.
+
+### Why
+
+Repository needed reviewer-ready docs and an evidence-locked foundation for
+the final report and slides.
+
+### Files / Components
+
+- `README.md` (rewritten), `docs/FINAL_REPORT_SOURCE.md`,
+  `docs/PRESENTATION_SOURCE.md`, `docs/RESULTS_REFERENCE.md`,
+  `docs/REFERENCES.md` (new).
+
+### Implementation Details
+
+All metrics re-verified against artifacts during writing (both baseline
+JSONs, full 15-row comparison CSV, robust training config/history,
+bias audit JSON, split metadata; robust clean precision/F1 confirmed as
+0.8652/0.8916 from the eval CSV, not derived). Deltas stated strictly as
+percentage points. Related work beyond the 3 cited papers explicitly
+marked open; Li et al. author/venue flagged for verification.
+
+### Verification
+
+- Every relative link checked against the repo (all resolve; no absolute
+  local paths in new docs).
+- `git diff --check` clean; `git status` shows only README + 4 new docs;
+  no application, research, data, or checkpoint file modified.
+- Stale scaffolds `docs/methodology.md`, `docs/results_summary.md`, and the
+  baseline entry of `docs/experiment_log.md` (still TBD/NOT RUN) left
+  untouched; RESULTS_REFERENCE explicitly supersedes them for numbers.
+
+### Problems / Solutions
+
+- None. Missing material honestly flagged: dashboard screenshot,
+  related-work survey, significance testing.
+
+### Status
+
+COMPLETED (docs written and validated; uncommitted).
