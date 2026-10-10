@@ -2415,3 +2415,57 @@ result, plot, dashboard, or protocol-content changes.
 ### Status
 
 COMPLETED (fixes applied and validated; uncommitted).
+
+---
+
+## Development Step: Main Research Notebook — End-to-End Walkthrough (Person 2)
+
+### What We Did
+
+Replaced `notebooks/02_baseline_training.ipynb` with
+`notebooks/ai_image_detection_robustness_analysis.ipynb`: a 12-section,
+24-cell read-only walkthrough (overview → dataset → baseline → JPEG /
+resize / recompression / combined → robust training → comparison → bias
+audit → visualization → conclusions) built by a generator script and
+executed headless. Updated `AGENTS.md` notebook rules (§§29–33) and
+structure listing, plus the README structure line, to the single-notebook
+convention. No scripts, results, or protocols touched.
+
+### Why
+
+Reviewers need one descriptive entry point mapping every completed
+experiment to its script and validated outputs, without duplicating
+implementations or re-running expensive steps.
+
+### Files / Components
+
+- `notebooks/ai_image_detection_robustness_analysis.ipynb` (new, 244 KB
+  executed with outputs); `notebooks/02_baseline_training.ipynb` removed.
+- `AGENTS.md` (§§29–33 wording, structure tree), `README.md` (one line).
+
+### Implementation Details
+
+All 12 code cells read saved artifacts only (manifest, metric CSVs,
+training config/history, bias audit, graphs); assertions verify counts,
+CM sums, and row counts; embedded PNGs via relative paths; no torch
+import, no training, no inference. Interpretations reuse validated
+dev-log observations, labeled as observations.
+
+### Verification
+
+- nbconvert headless execution: all 12 code cells ran sequentially, zero
+  errors; outputs show real values (e.g. effnet 0.9073/0.9034/0.9096).
+- One builder syntax bug (unbalanced paren) fixed before the green run.
+- Repo-wide search: no live references to old filenames outside AGENTS
+  historical pointers and this log's history.
+- `git status`: only notebook swap + AGENTS/README/log edits; scripts,
+  results, data, checkpoints untouched; nothing committed.
+
+### Problems / Solutions
+
+- Builder bug above; fixed. nbconvert zmq Proactor warning on Windows is
+  environmental noise, not a failure.
+
+### Status
+
+COMPLETED (walkthrough built, executed, validated; uncommitted).

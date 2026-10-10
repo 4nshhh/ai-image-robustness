@@ -226,9 +226,8 @@ ai-image-robustness/
 │   └── metadata/
 │
 ├── notebooks/
-│   └── 02_baseline_training.ipynb
-│       (analysis/robust-training work lives in scripts/; placeholder
-│       notebooks 01/03/04 were removed — see development log)
+│   └── ai_image_detection_robustness_analysis.ipynb
+│       (end-to-end walkthrough; experiment logic lives in scripts/)
 │
 ├── src/
 │   ├── __init__.py
@@ -845,12 +844,13 @@ Do not duplicate functionality unnecessarily.
 
 ## 29. Notebook Rules
 
-Use numbered notebooks:
+Use one descriptive end-to-end walkthrough notebook:
 
-01_dataset_analysis.ipynb
-02_baseline_training.ipynb
-03_transformation_experiments.ipynb
-04_robust_training.ipynb
+ai_image_detection_robustness_analysis.ipynb
+
+The numbered-notebook convention (01–04) was retired: placeholder notebooks
+01/03/04 were removed and analysis consolidated here, with implementation
+in `scripts/` and reusable logic in `src/`.
 
 Each notebook should have a clear purpose.
 
@@ -862,7 +862,8 @@ Important reusable logic should not exist only inside notebooks.
 
 ## 30. Dataset Analysis Notebook
 
-01_dataset_analysis.ipynb should investigate:
+Dataset analysis (walkthrough Section 1; was `01_dataset_analysis.ipynb`,
+now removed) should investigate:
 
 - number of Real images
 - number of AI images
@@ -890,7 +891,8 @@ Useful plots include:
 
 ## 31. Baseline Training Notebook
 
-02_baseline_training.ipynb should:
+Baseline training (walkthrough Sections 2–3; was
+`02_baseline_training.ipynb`, superseded by the walkthrough) should:
 
 1. Load finalized splits
 2. Load preprocessing
@@ -905,7 +907,8 @@ Useful plots include:
 
 ## 32. Transformation Experiment Notebook
 
-03_transformation_experiments.ipynb should:
+Transformation experiments (walkthrough Sections 4–7; was
+`03_transformation_experiments.ipynb`, now removed) should:
 
 1. Load the selected baseline checkpoint
 2. Load the untouched test split
@@ -921,7 +924,8 @@ The baseline checkpoint must NOT be retrained for every transformation.
 
 ## 33. Robust Training Notebook
 
-04_robust_training.ipynb should:
+Robust training (walkthrough Sections 8–9; was
+`04_robust_training.ipynb`, now removed) should:
 
 1. Define transformation-aware training configuration
 2. Train robust model
