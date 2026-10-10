@@ -40,7 +40,7 @@ How do JPEG compression, resizing, recompression, and combinations of these tran
 
 ## 6. Dataset and Split Methodology
 
-Tiny-GenImage subset (`data/splits/genimage_8000_split_v4/manifest.csv`, seed 42): 4,000 Real / 3,986 AI across 7 generators (adm 569, biggan 570, glide 569, midjourney 569, sdv5 570, vqdm 572, wukong 567). Target was 8,000; 14 test/AI files were unrecoverable from the source export and excluded without substitution (see `docs/experiment_log.md`). SHA-256 audit: zero cross-split duplicates. Final: train 5,600 (2,800/2,800), val 1,200 (600/600), test 1,186 (600/586). Images are gitignored; manifest + `split_metadata.json` are committed.
+Tiny-GenImage subset (`data/splits/genimage_8000_split_v4/manifest.csv`, seed 42): 4,000 Real / 3,986 AI across 7 generators (adm 569, biggan 570, glide 569, midjourney 569, sdv5 570, vqdm 572, wukong 567). Target was 8,000; 14 test/AI files were unrecoverable from the source export and excluded without substitution (decision record: `RESULTS_REFERENCE.md` dataset table and the manifest `integrity_note`). SHA-256 audit: zero cross-split duplicates. Final: train 5,600 (2,800/2,800), val 1,200 (600/600), test 1,186 (600/586). Images are gitignored; manifest + `split_metadata.json` are committed.
 
 ## 7. Models and Preprocessing
 

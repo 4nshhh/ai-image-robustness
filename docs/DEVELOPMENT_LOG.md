@@ -2300,3 +2300,58 @@ marked open; Li et al. author/venue flagged for verification.
 ### Status
 
 COMPLETED (docs written and validated; uncommitted).
+
+---
+
+## Development Step: Documentation Consolidation for Final Submission
+
+### What We Did
+
+Documentation-only consolidation on `main`: updated
+`docs/EXPERIMENT_PROTOCOL.md` to the completed-project state; deleted
+`docs/methodology.md`, `docs/results_summary.md`, `docs/experiment_log.md`
+after preserving their unique content; repointed links in README,
+FINAL_REPORT_SOURCE, RESULTS_REFERENCE, and notebook 02. No code, data,
+checkpoints, results, or configs touched.
+
+### Why
+
+`docs/` held stale TBD/NOT RUN scaffolds competing with the authoritative
+protocol/results reference; final submission needs one consistent story.
+
+### Files / Components
+
+- `docs/EXPERIMENT_PROTOCOL.md`: preamble + §6/§7/§9.2/matrix now record
+  executed robust training (policy, epoch 8 / val 0.9008, `models/robust/`
+  checkpoint), designed unseen-level coverage, completed file-size-gap audit
+  note, and a corrected "15 conditions" count (an earlier draft said 16).
+- Deleted: `methodology.md` (scaffold RQ+pipeline, duplicated elsewhere,
+  zero references), `results_summary.md` (stale TBD table, superseded, zero
+  references), `experiment_log.md` (its unique 7,986-dataset decision
+  survives in `split_metadata.json` integrity_note, this log, and
+  RESULTS_REFERENCE; its baseline entry was stale NOT RUN).
+- Links repointed to authoritative homes (RESULTS_REFERENCE,
+  split_metadata.json); notebook 02 cell edit verified as valid JSON.
+- `AGENTS.md` structure listing + §74-style log-rule reference left
+  untouched (binding doc, out of scope) — noted, not fixed.
+
+### Implementation Details
+
+Decisions: delete rather than archive (history preserved in Git);
+no new document created; pp-vs-percent discipline kept; format confound
+and no-generalization statements unchanged.
+
+### Verification
+
+- `git status` shows only doc changes + 3 deletions; `git diff --check`
+  clean; repo-wide search confirms no live references to deleted files
+  outside AGENTS.md history and this log's own historical notes.
+- Relative links re-checked (all resolve); notebook JSON parses.
+
+### Problems / Solutions
+
+- None. Open: AGENTS.md docs-listing now slightly stale (accepted, reported).
+
+### Status
+
+COMPLETED (consolidation done; uncommitted).

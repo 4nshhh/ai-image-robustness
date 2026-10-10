@@ -77,7 +77,7 @@ Core dependencies: `torch`, `torchvision`, `numpy`, `pandas`, `Pillow`, `opencv-
 
 ## Dataset
 
-Tiny-GenImage subset, 7,986 images: train 5,600 (2,800/2,800), val 1,200 (600/600), test 1,186 (600 Real / 586 AI), seed 42. Seven AI generators (adm, biggan, glide, midjourney, sdv5, vqdm, wukong; ~569–572 images each). 14 test/AI files were unrecoverable from the source export (documented in `docs/experiment_log.md`); SHA-256 audit found zero cross-split duplicates. Manifest: `data/splits/genimage_8000_split_v4/manifest.csv` (images themselves are gitignored — obtain separately; see `docs/EXPERIMENT_PROTOCOL.md`).
+Tiny-GenImage subset, 7,986 images: train 5,600 (2,800/2,800), val 1,200 (600/600), test 1,186 (600 Real / 586 AI), seed 42. Seven AI generators (adm, biggan, glide, midjourney, sdv5, vqdm, wukong; ~569–572 images each). 14 test/AI files were unrecoverable from the source export (see `docs/RESULTS_REFERENCE.md`); SHA-256 audit found zero cross-split duplicates. Manifest: `data/splits/genimage_8000_split_v4/manifest.csv` (images themselves are gitignored — obtain separately; see `docs/EXPERIMENT_PROTOCOL.md`).
 
 ## Models and Workflow
 

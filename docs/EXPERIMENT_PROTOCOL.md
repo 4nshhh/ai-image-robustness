@@ -3,10 +3,12 @@
 Status preamble (audited against the repository): Sections 3.1–3.5 are
 COMPLETED — clean baseline plus JPEG, resize, recompression, and combined
 evaluations have been executed with results saved under `results/` (see
-the Experiment Matrix, Section 11). Sections 6–7 (robust training,
-unseen levels) are PLANNED and have NOT been run. No results are claimed
-in this document; measured numbers live in `results/` and
-`docs/DEVELOPMENT_LOG.md`.
+the Experiment Matrix, Section 11). Section 6 (robust training) is
+COMPLETED — the robust checkpoint was trained and evaluated head-to-head
+across all 15 conditions (Experiment 6). Section 7 (unseen levels) is
+COMPLETED as designed via the training-policy reservations evaluated in
+Experiment 6. No results are claimed in this document; measured numbers
+live in `results/` and `docs/RESULTS_REFERENCE.md`.
 
 ## 1. Research Question
 
@@ -136,53 +138,48 @@ secondary metrics after the headline set**: a false negative is an
 AI-generated image that evades detection, which is the key failure mode
 of this system. Do not judge conditions by accuracy alone.
 
-## 6. Robust Training (PLANNED — Rules Fixed Before Implementation)
+## 6. Robust Training (EXECUTED — Rules Followed, Values Recorded)
 
-Compare the **standard model** (the frozen EfficientNet-B0 clean
+Compared the **standard model** (the frozen EfficientNet-B0 clean
 baseline, Section 2.1) against a **robust model** trained with controlled
 transformations, on the clean test set AND the exact robustness
 conditions of Sections 3.2–3.5, using the identical protocol of
-Sections 4–5. The classification task does not change (Real vs AI).
-Architecture stays EfficientNet-B0 unless the team explicitly decides
-otherwise with justification.
+Sections 4–5. The classification task did not change (Real vs AI).
+Architecture stayed EfficientNet-B0.
 
-Binding rules (no implementation may start until each is written down):
+Executed configuration (from `models/robust/robust_training_config.json`;
+binding rules 1–7 below were all satisfied):
 
-1. TRAIN data only for training. The 5,600-image train split is the only
-   source of training pixels.
-2. Validation (1,200) may be used for model selection/tuning. Test data
-   (1,186) must NEVER influence training, hyperparameters, augmentation
-   policy, or checkpoint selection.
-3. The training transformation policy must be explicitly specified first:
-   (a) clean + transformed mix vs transformed-only; (b) exact
-   transformation types and parameter ranges/levels; (c) per-sample
-   transformation probabilities; (d) the random seed governing the policy.
-   All four must be fixed, seeded, and reproducible.
-4. No training-time transformation mechanism currently exists in
-   `src/preprocessing.py` / `src/train.py` (only `RandomHorizontalFlip`
-   for train); the mechanism must be designed and documented — not
-   improvised inside the training loop.
-5. Robust checkpoint saved under `models/robust/`, never committed to Git
-   (same ignore rules as baseline weights).
-6. Evaluation reuses the finished experiment scripts/procedure on the same
-   16 robustness conditions, so baseline-vs-robust numbers are directly
-   comparable; also verify clean-image performance did not regress.
-7. Training transformations (what the model saw) and evaluation
-   transformations (what it is tested on) are recorded separately; the
-   optional unseen-levels test (Section 7) stays OPTIONAL and never
-   replaces the core same-condition comparison.
+1. TRAIN data only (5,600). Validation (1,200) used for selection.
+   Test (1,186) never influenced training, policy, or selection.
+2. Policy actually used — clean 40%; JPEG 20% (Q∼{90,70,50,30}); resize
+   15% (∼{0.75,0.50}); recompression 15% (Q∼{90,70}, passes=2); combined
+   10% (C1/C2); seed 42. Both classes identically.
+3. Optimizer Adam, lr/weight-decay 1e-4, 10 epochs, batch 16, CUDA,
+   from `models/baseline/efficientnet_b0_best.pth`, all params trained.
+4. Selection: highest clean-val accuracy (tie → lower val loss, then
+   earlier) → best epoch 8 (val 0.9008); checkpoint
+   `models/robust/efficientnet_b0_robust_best.pth` (weights gitignored).
+5. Evaluation reused the finished procedure on the same 15 conditions
+   (correction: an earlier draft of this section said "16" — the evaluated
+   set is 15: clean + 4 JPEG + 3 resize + 4 recompression + 3 combined);
+   clean-image performance checked for regression (accuracy −1.77 pp).
+6. Training transformations vs evaluation transformations recorded
+   separately in the training config; unseen reservations (resize 0.25,
+   recompression Q50/Q30, C3) evaluated in Experiment 6.
 
-Level/probability values remain TBD pending team approval — they are NOT
-set by this document.
+Results: `results/metrics/baseline_vs_robust_efficientnet_b0.csv`;
+full narrative in `docs/RESULTS_REFERENCE.md`.
 
-## 7. Optional Advanced Experiment: Unseen Transformations
+## 7. Unseen Transformations (EXECUTED as Designed)
 
-OPTIONAL / ADVANCED — perform only if time and data permit, and do not
-assume it will happen. Train the robust model on a subset of
-transformation levels (e.g. JPEG Q90 + Q70) and evaluate on held-out
-levels (e.g. Q50 + Q30) or held-out combinations. This tests
-generalization rather than memorization of specific artifacts. Claim
-generalization only if this experiment is actually run.
+The robust model was trained on a subset of levels (JPEG Q90–Q30 seen;
+resize {0.75, 0.50}; recompression Q{90, 70}; combined C1/C2) and evaluated
+on held-out levels and combinations: resize 0.25, recompression Q50/Q30,
+and C3. All held-out conditions improved substantially (e.g. C3 AI recall
++36.69 pp); resize 0.25 remains weakest in absolute terms. Generalization
+beyond these held-out levels is NOT claimed — only the evaluated
+conditions support conclusions.
 
 ## 8. Result Storage
 
@@ -217,14 +214,19 @@ Consequences, stated carefully:
   applies symmetrically to already-decoded pixels), but the same caution
   applies to any claim about learned artifacts vs dataset shortcuts.
 
-### 9.2 Remaining audit checklist
+### 9.2 Audit status (completed items and one remaining gap)
 
-No robustness result is fully interpretable until the audit also covers
-systematic Real-vs-AI differences in: image resolution and aspect ratio,
-file size, generator distribution, and preprocessing. High clean accuracy
-may reflect such shortcuts rather than genuine generation artifacts — do
-not claim otherwise until the audit rules each out. Do not assert any
-unchecked bias exists; check it.
+Experiment 8 audited, per split × class: file extension, decoded format,
+geometry (width/height/aspect), color mode, and JPEG quantization presence
+— plus a metadata-only diagnostic (1.0000 validation/held-out-test).
+Generator composition is documented in `split_metadata.json`; preprocessing
+is identical for both classes by pipeline construction. Remaining gap:
+**file size was not audited** — do not assert anything about size
+shortcuts. Results:
+`results/metrics/dataset_bias_audit.csv`,
+`results/experiment_logs/dataset_bias_audit.json`. High clean accuracy may
+still reflect shortcuts rather than genuine generation artifacts; the
+confirmed format/mode/geometry separations above are the reason.
 
 ## 10. Result Interpretation
 
@@ -258,8 +260,8 @@ unchecked bias exists; check it.
 | combined_c1 | Combined | resize→jpeg | scale=0.50, quality=50 | clean-trained | test | COMPLETED |
 | combined_c2 | Combined | jpeg→resize | quality=50, scale=0.50 | clean-trained | test | COMPLETED |
 | combined_c3 | Combined | resize→jpeg→jpeg | scale=0.50, quality=50, passes=2 | clean-trained | test | COMPLETED |
-| robust_train | Robust training | TBD (Section 6 rules) | TBD — needs approval | transformation-aware | test (clean + transformed) | PLANNED / PENDING APPROVAL |
-| unseen_levels | Unseen levels (OPTIONAL) | TBD | TBD | transformation-aware | test (held-out levels) | PLANNED / OPTIONAL |
+| robust_train | Robust training | policy §6 (40/20/15/15/10) | best clean-val epoch 8 (0.9008) | transformation-aware | test (clean + transformed) | COMPLETED |
+| unseen_levels | Unseen levels | resize 0.25, recomp Q50/Q30, C3 | held-out by policy §6 | transformation-aware | test (held-out levels) | COMPLETED as designed |
 
-Sections 3.1–3.5 are COMPLETED with results in `results/`; Sections 6–7
-are PLANNED and have NOT been run.
+Sections 3.1–3.5, 6, and 7 are COMPLETED with results in `results/`;
+see `docs/RESULTS_REFERENCE.md` for the validated numbers.

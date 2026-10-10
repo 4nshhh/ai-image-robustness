@@ -9,7 +9,7 @@
 | Total / Real / AI | 7,986 / 4,000 / 3,986 | `data/splits/genimage_8000_split_v4/split_metadata.json` |
 | Train / Val / Test | 5,600 (2,800/2,800) / 1,200 (600/600) / 1,186 (600/586) | same + `manifest.csv` (7,986 rows) |
 | Seed / generators | 42 / adm 569, biggan 570, glide 569, midjourney 569, sdv5 570, vqdm 572, wukong 567 | same |
-| Duplicates / missing | 0 cross-split SHA-256 groups; 14 test/AI files unrecoverable | `docs/experiment_log.md` |
+| Duplicates / missing | 0 cross-split SHA-256 groups; 14 test/AI files unrecoverable | `data/splits/genimage_8000_split_v4/split_metadata.json` (`integrity_note`) |
 
 ## Clean Baselines (threshold 0.5)
 
@@ -65,4 +65,4 @@ Lossless PNG: zero prediction changes for either model. JPEG Q95 (4:4:4): baseli
 
 ## Reconciliation Note
 
-No discrepancies found: clean controls in every experiment CSV reproduce the baseline JSONs exactly (full precision); comparison-CSV deltas recompute from model rows; CM cells sum to 1,186 in all 30+ rows checked. `docs/results_summary.md` and the baseline entry in `docs/experiment_log.md` are stale scaffolds (still TBD/NOT RUN) and must NOT be cited — this file supersedes them for numbers.
+No discrepancies found: clean controls in every experiment CSV reproduce the baseline JSONs exactly (full precision); comparison-CSV deltas recompute from model rows; CM cells sum to 1,186 in all 30+ rows checked. (Historical note: retired scaffold docs `methodology.md` / `results_summary.md` / `experiment_log.md` once held TBD/NOT RUN placeholders; the decision record they contained survives in `split_metadata.json` and `docs/DEVELOPMENT_LOG.md`.)
