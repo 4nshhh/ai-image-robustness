@@ -2469,3 +2469,53 @@ dev-log observations, labeled as observations.
 ### Status
 
 COMPLETED (walkthrough built, executed, validated; uncommitted).
+
+---
+
+## Development Step: Final Project Report (Markdown Source)
+
+### What We Did
+
+Wrote `docs/FINAL_PROJECT_REPORT.md` (title page through 3 appendices, ~12.7k
+chars) plus supporting generator `scripts/plot_system_architecture.py` and its
+output `results/graphs/system_architecture_pipeline.png`. Five figures
+embedded by relative path (architecture, JPEG/resize sweeps, all-condition
+comparison, robust confusion matrices). No DOCX/PDF — neither pandoc nor a
+Python converter exists in the environment. No code, data, results, or
+checkpoints modified.
+
+### Why
+
+Submission-ready narrative with every number traceable to a saved artifact.
+
+### Files / Components
+
+- `docs/FINAL_PROJECT_REPORT.md` (new); `scripts/plot_system_architecture.py`
+  (new, reproducible); `results/graphs/system_architecture_pipeline.png` (new).
+
+### Implementation Details
+
+Title page carries roles + the two confirmed member names only (no IDs,
+dates, or institution — none in repo files). Related work limited to the
+three verified citations; survey gap and Li-details verification flagged.
+Per scope: no bias-audit/format content anywhere (scrub-verified), no
+dedicated limitations section, scope bounded to 15 conditions, deltas in
+pp, no causal/significance/universal claims.
+
+### Verification
+
+- Every absolute metric re-checked against CSVs/JSONs (incl. Appendix C
+  confusion counts and robust clean precision/F1 from the eval CSV).
+- All 5 figure files exist; exclusion-term scrub clean (one benign
+  "significance testing" future-work mention); prose scan clean; UTF-8 valid.
+- Dashboard screenshot omitted (headless, no browser to capture) — reported.
+- `git diff --check` clean; status shows only the 3 new paths.
+
+### Problems / Solutions
+
+- Stray placeholder image line removed before finalizing. No data issues.
+
+### Status
+
+COMPLETED (report source written and validated; uncommitted; DOCX/PDF not
+producible in this environment).
