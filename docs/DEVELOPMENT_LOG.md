@@ -2519,3 +2519,55 @@ pp, no causal/significance/universal claims.
 
 COMPLETED (report source written and validated; uncommitted; DOCX/PDF not
 producible in this environment).
+
+---
+
+## Development Step: Final Report Audit and Expansion
+
+### What We Did
+
+Audited `FINAL_REPORT_SOURCE.md` against artifacts (30-point checklist),
+rescued two git-tracked files found deleted from disk
+(`data/splits/.../manifest.csv`, `split_metadata.json` — restored
+byte-identical via `git restore`, 7,986 rows verified), verified all three
+references against publication records, created
+`scripts/plot_combined_comparison.py` +
+`results/graphs/combined_c1_c2_c3_comparison.png` (AI recall + separate FP
+panel), and expanded the report to 29 sections with title page (confirmed
+team names/college; IDs/dates omitted as unrecorded), equations appendix,
+per-family tables, held-out table, and CM/training appendices. No bias or
+format-confound content per scope; no code/data/result modifications.
+
+### Why
+
+Submission-ready narrative traceable metric-by-metric to saved artifacts.
+
+### Files / Components
+
+- `docs/FINAL_REPORT_SOURCE.md` (expanded 85 → 204 lines).
+- `scripts/plot_combined_comparison.py` + graph (new).
+- Verified references now carry full author/venue details (Zhu et al.
+  arXiv:2306.08571 2023; Grommelt et al. ECCV24 Ws LNCS 15644:80–95;
+  Li et al. CVPR 2026 pp. 35427–35436).
+
+### Implementation Details
+
+All table values re-verified (incl. recomp AUCs, robust clean
+0.8652/0.8916/0.9591/0.0802, Appendix C CMs). Fixed one inherited error:
+"19 model-conditions" → 30 (15×2). Deltas strictly pp.
+
+### Verification
+
+- Excluded-content scrub clean; figure paths exist; UTF-8 valid;
+  `git diff --check` clean; status shows only report + graph + script.
+- DOCX/PDF still not producible (no pandoc/python-docx); dashboard
+  screenshot still uncapturable headless.
+
+### Problems / Solutions
+
+- Manifest/metadata deletion found at task start (cause unknown, not
+  caused by this session); rescued via git, integrity re-verified.
+
+### Status
+
+COMPLETED (report expanded and validated; uncommitted).
