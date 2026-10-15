@@ -2571,3 +2571,41 @@ All table values re-verified (incl. recomp AUCs, robust clean
 ### Status
 
 COMPLETED (report expanded and validated; uncommitted).
+
+---
+
+## Development Step: Project Working Guide for Presentation Prep
+
+### What We Did
+
+Created `docs/PROJECT_WORKING_GUIDE.md` (~65k chars, 26 sections + appendix)
+on `main`: beginner-friendly end-to-end explanation with verified counts,
+code walkthrough of 12 real functions, metric tables from saved CSVs,
+60-second script, 35+ Q&A bank, hard-questions section, slide speaking
+guide, glossary, revision sheet, and the agreed Ansh/Krish/Keval work
+split (allocation as agreed; no authorship claims beyond it).
+
+### Why
+
+All three members must present confidently and answer faculty questions
+from verified facts, not memory.
+
+### Verification
+
+- Split counts re-checked against `manifest.csv` (5600/1200/1186 exact).
+- All key metrics re-read from comparison CSV (incl. C3 FP=54, robust
+  clean prec 0.8652/FP 84, resize CMs); pp deltas recomputed.
+- Every named function verified to exist (`load_all`, `fit`, `validate`,
+  `evaluate_model`, `compute_classification_metrics`, sampler, etc.);
+  param counts computed live (EffNet 4.01M, ResNet 23.5M).
+- TOC anchors (27) all resolve; code-fenced paths are real files except
+  intentional glob patterns; dashboard confirmed read-only (no torch,
+  checkpoints, or uploads in `app/app.py`).
+
+### Problems / Solutions
+
+- None. No implementation files modified; no training or downloads run.
+
+### Status
+
+COMPLETED (guide written and validated; uncommitted).

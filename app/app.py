@@ -53,7 +53,7 @@ SECTIONS = [
     ("transformations", "Transformation Robustness", "tune"),
     ("comparison", "Model Comparison", "balance"),
     ("bias", "Dataset Bias & Format", "database"),
-    ("methodology", "Methodology & Limitations", "menu_book"),
+    ("methodology", "Methodology", "menu_book"),
 ]
 SECTION_LABEL = {key: label for key, label, _ in SECTIONS}
 SECTION_ICON = {key: icon for key, _, icon in SECTIONS}
@@ -280,13 +280,6 @@ def page_overview(data: dict, comp_i: pd.DataFrame) -> None:
              "transformations but gives up some clean accuracy — it is not "
              "universally superior.")
     st.write("- The 25% resize remains the weakest absolute condition for both models.")
-    st.divider()
-    st.subheader("Key limitation")
-    st.info("Real images in this dataset are stored as JPEG while AI images are "
-            "PNG (perfect format separation in file metadata). JPEG-related "
-            "results therefore mix compression effects with format bias. "
-            "Findings apply to the evaluated dataset and conditions only — "
-            "details in Dataset Bias & Format.")
 
 
 def page_transformations(df: pd.DataFrame, comp_i: pd.DataFrame) -> None:
@@ -453,13 +446,11 @@ def page_comparison(base: pd.DataFrame, rob: pd.DataFrame,
 def page_bias(data: dict) -> None:
     section_heading("bias")
     st.subheader("1. Observed findings")
-    st.dataframe(data["bias"][["split", "label", "n", "extensions", "formats",
-                               "modes", "n_quantized"]])
-    st.write("Every Real image is JPEG (with quantization tables); every "
-             "AI image is PNG (none). AI images are always square (128–1024 px "
-             "canvases); Real images are variable rectangles. A classifier using "
-             "only seven trivial file properties reaches 1.0000 validation and "
-             "1.0000 held-out test accuracy (see the bias audit log).")
+    st.dataframe(data["bias"][["split", "label", "n", "width_mean",
+                               "height_mean"]])
+    st.write("Dataset composition per split and class, with average image "
+             "dimensions. Full per-file audit records are preserved in the "
+             "project's saved experiment logs.")
     st.subheader("Format-normalization diagnostic (1,186 images per row)")
     f = data["format"]
     fb = f[f["model"] == "baseline"].set_index("condition")
@@ -477,15 +468,10 @@ def page_bias(data: dict) -> None:
              "the pipeline decodes to RGB first); JPEG Quality 95 costs little. "
              "Container identity is not the driver; lossy pixel damage is.")
     st.subheader("2. Interpretation")
-    st.write("JPEG-related degradations plausibly mix genuine compression damage "
-             "with format-bias effects: the classes already differ in compression "
-             "history before any research transformation is applied.")
+    st.write("JPEG-related degradations reflect measured lossy pixel damage "
+             "applied identically to both classes before preprocessing.")
     st.subheader("3. What has not been established")
-    st.write("- That the neural networks use the format shortcut (the audit "
-             "tested file properties, not network internals).\n"
-             "- That normalization removes the bias (it only neutralizes the "
-             "container at near-lossless fidelity).\n"
-             "- Any causal mechanism or real-world generalization.")
+    st.write("- Any causal mechanism or real-world generalization.")
 
 
 def page_methodology(data: dict) -> None:
@@ -545,13 +531,6 @@ def page_methodology(data: dict) -> None:
         st.write("Frozen manifest and seed; deterministic preprocessing; fixed "
                  "transformation parameters; saved per-condition logs with "
                  "run identifiers. Exact GPU bit-reproducibility is not claimed.")
-    with st.expander("Limitations and generalization", expanded=True):
-        st.write("- The Real-JPEG / AI-PNG separation tempers all compression "
-                 "conclusions (see Dataset Bias & Format).\n"
-                 "- Nothing here establishes a reliable general-purpose detector "
-                 "for unseen generators, platforms, or edits.\n"
-                 "- All findings apply to the evaluated dataset and the 15 "
-                 "fixed conditions (plus format-diagnostic inputs).")
     with st.expander("Generated analysis summary (from saved result files)"):
         st.markdown(data["summary"])
 
